@@ -1,0 +1,810 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>한화첨단소재 · Market Intelligence</title>
+<link rel="preconnect" href="https://fonts.googleapis.com" />
+<link href="https://fonts.googleapis.com/css2?family=DM+Mono:wght@300;400;500&family=Syne:wght@700;800&display=swap" rel="stylesheet" />
+<style>
+  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+  :root {
+    --bg0: #050810;
+    --bg1: #080c14;
+    --bg2: #0a111e;
+    --bg3: #0d1929;
+    --border: #1a2438;
+    --border2: #1e2d42;
+    --border3: #2d4a6b;
+    --text1: #e2e8f0;
+    --text2: #94a3b8;
+    --text3: #64748b;
+    --text4: #475569;
+    --text5: #334155;
+    --blue: #3b82f6;
+    --blue-light: #93c5fd;
+    --purple: #a78bfa;
+    --green: #22c55e;
+    --amber: #f59e0b;
+    --red: #ef4444;
+  }
+
+  html, body { height: 100%; }
+
+  body {
+    background: var(--bg1);
+    color: var(--text1);
+    font-family: 'DM Mono', 'IBM Plex Mono', monospace;
+    min-height: 100vh;
+  }
+
+  /* Scrollbar */
+  ::-webkit-scrollbar { width: 4px; }
+  ::-webkit-scrollbar-track { background: var(--bg3); }
+  ::-webkit-scrollbar-thumb { background: #1e3a5f; border-radius: 2px; }
+
+  /* ── Header ── */
+  #header {
+    border-bottom: 1px solid var(--border);
+    padding: 18px 32px;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    background: var(--bg0);
+    position: sticky;
+    top: 0;
+    z-index: 100;
+  }
+  #header .brand { font-family: 'Syne', sans-serif; font-size: 13px; font-weight: 800; letter-spacing: .25em; color: var(--blue); text-transform: uppercase; margin-bottom: 3px; }
+  #header .sub { font-size: 10px; color: var(--text4); letter-spacing: .1em; }
+  #header .live { display: flex; align-items: center; gap: 8px; font-size: 11px; color: var(--text4); }
+
+  .pulse-ring { position: relative; display: inline-flex; align-items: center; justify-content: center; width: 10px; height: 10px; }
+  .pulse-ring .ring { position: absolute; width: 16px; height: 16px; border-radius: 50%; background: var(--green); opacity: .3; animation: pulseRing 1.5s ease-out infinite; }
+  .pulse-ring .dot { width: 8px; height: 8px; border-radius: 50%; background: var(--green); }
+
+  /* ── Main ── */
+  #app { max-width: 980px; margin: 0 auto; padding: 28px 24px; }
+
+  /* ── API Key Setup ── */
+  #api-setup {
+    background: var(--bg2);
+    border: 1px solid var(--border3);
+    border-radius: 10px;
+    padding: 24px;
+    margin-bottom: 24px;
+  }
+  #api-setup .label { font-size: 10px; color: var(--blue); letter-spacing: .15em; margin-bottom: 10px; }
+  #api-setup .desc { font-size: 12px; color: var(--text3); line-height: 1.7; margin-bottom: 14px; }
+  #api-setup .desc a { color: var(--blue-light); text-decoration: none; }
+  #api-setup .desc a:hover { text-decoration: underline; }
+  .input-row { display: flex; gap: 8px; }
+  .api-input {
+    flex: 1;
+    background: var(--bg0);
+    border: 1px solid var(--border2);
+    border-radius: 6px;
+    color: var(--text1);
+    font-size: 12px;
+    font-family: 'DM Mono', monospace;
+    padding: 10px 14px;
+    outline: none;
+    transition: border-color .2s;
+  }
+  .api-input:focus { border-color: var(--blue); }
+  .btn-save {
+    background: #1d4ed8;
+    border: none;
+    border-radius: 6px;
+    color: #fff;
+    font-size: 12px;
+    font-family: 'DM Mono', monospace;
+    padding: 10px 20px;
+    cursor: pointer;
+    transition: background .2s;
+    white-space: nowrap;
+  }
+  .btn-save:hover { background: #2563eb; }
+  #api-status { font-size: 11px; margin-top: 8px; }
+
+  /* ── Modules ── */
+  .section-label { font-size: 10px; color: var(--text4); letter-spacing: .15em; margin-bottom: 12px; }
+
+  #modules { display: grid; grid-template-columns: repeat(4, 1fr); gap: 10px; margin-bottom: 10px; }
+
+  .topic-btn {
+    background: var(--bg2);
+    border: 1px solid var(--border2);
+    border-radius: 8px;
+    padding: 14px 12px;
+    color: var(--text2);
+    text-align: left;
+    cursor: pointer;
+    position: relative;
+    overflow: hidden;
+    transition: all .2s;
+    font-family: 'DM Mono', monospace;
+  }
+  .topic-btn:hover { border-color: var(--blue); background: var(--bg3); color: var(--blue-light); }
+  .topic-btn.active { border-color: var(--blue); background: var(--bg3); color: var(--blue-light); }
+  .topic-btn::before {
+    content: '';
+    position: absolute; top: 0; left: -100%; width: 100%; height: 100%;
+    background: linear-gradient(90deg, transparent, rgba(59,130,246,.07), transparent);
+    transition: .4s;
+  }
+  .topic-btn:hover::before { left: 200%; }
+  .topic-btn .icon { font-size: 18px; margin-bottom: 6px; color: var(--text5); transition: color .2s; }
+  .topic-btn:hover .icon, .topic-btn.active .icon { color: var(--blue); }
+  .topic-btn .name { font-size: 12px; font-weight: 500; }
+
+  /* Custom query */
+  #custom-toggle {
+    width: 100%;
+    background: transparent;
+    border: 1px dashed var(--border2);
+    border-radius: 6px;
+    padding: 10px;
+    color: var(--text4);
+    font-size: 12px;
+    font-family: 'DM Mono', monospace;
+    cursor: pointer;
+    letter-spacing: .05em;
+    margin-bottom: 24px;
+    transition: all .2s;
+  }
+  #custom-toggle:hover { border-color: var(--border3); color: var(--text3); }
+  #custom-area { margin-bottom: 24px; display: none; }
+  #custom-area.open { display: flex; gap: 8px; }
+  #custom-input {
+    flex: 1;
+    background: var(--bg2);
+    border: 1px solid var(--border3);
+    border-radius: 6px;
+    color: var(--text1);
+    font-size: 12px;
+    font-family: 'DM Mono', monospace;
+    padding: 10px 14px;
+    resize: none;
+    outline: none;
+    transition: border-color .2s;
+  }
+  #custom-input:focus { border-color: var(--blue); }
+  .custom-btns { display: flex; flex-direction: column; gap: 6px; }
+  .btn-run { background: #1d4ed8; border: none; border-radius: 5px; color: #fff; padding: 8px 14px; font-size: 11px; font-family: 'DM Mono', monospace; cursor: pointer; }
+  .btn-run:hover { background: #2563eb; }
+  .btn-cancel { background: transparent; border: 1px solid var(--border2); border-radius: 5px; color: var(--text4); padding: 8px 14px; font-size: 11px; font-family: 'DM Mono', monospace; cursor: pointer; }
+
+  /* ── Loading ── */
+  #loading { display: none; text-align: center; padding: 70px 0; }
+  #loading.show { display: block; }
+  .spinner-wrap { position: relative; width: 64px; height: 64px; margin: 0 auto 20px; }
+  .spinner-ring {
+    position: absolute;
+    border-radius: 50%;
+    border: 1px solid rgba(59,130,246,.5);
+    animation: pulseRing 1.4s ease-out infinite;
+  }
+  .spinner-dot { position: absolute; inset: 24px; border-radius: 50%; background: var(--blue); }
+  #loading .load-title { font-size: 12px; color: var(--text4); letter-spacing: .1em; }
+  #loading .load-sub { font-size: 11px; color: var(--text5); margin-top: 6px; }
+
+  /* ── Error ── */
+  #error-box {
+    display: none;
+    background: #1a0a0a;
+    border: 1px solid #7f1d1d;
+    border-radius: 8px;
+    padding: 14px 18px;
+    color: #fca5a5;
+    font-size: 12px;
+    margin-bottom: 16px;
+    line-height: 1.6;
+  }
+  #error-box.show { display: block; }
+
+  /* ── Result ── */
+  #result { display: none; }
+  #result.show { display: block; animation: fadeUp .4s ease; }
+
+  .report-header {
+    background: var(--bg2);
+    border: 1px solid var(--border);
+    border-radius: 10px;
+    padding: 20px 24px;
+    margin-bottom: 14px;
+  }
+  .rh-top { display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 14px; }
+  .rh-eyebrow { font-size: 10px; color: var(--blue); letter-spacing: .15em; margin-bottom: 4px; }
+  .rh-title { font-family: 'Syne', sans-serif; font-size: 18px; font-weight: 800; color: #f1f5f9; }
+  .rh-time { font-size: 11px; color: var(--text4); margin-top: 2px; }
+  .rh-impact .impact-label { font-size: 10px; color: var(--text4); letter-spacing: .1em; margin-bottom: 6px; text-align: right; }
+  .impact-value { font-size: 20px; font-weight: 700; font-family: 'Syne', sans-serif; text-align: right; }
+  .impact-bar-track { width: 80px; height: 3px; background: var(--border2); border-radius: 2px; margin-top: 6px; margin-left: auto; }
+  .impact-bar { height: 100%; border-radius: 2px; transition: width 1s ease; }
+
+  .summary-box {
+    background: var(--bg0);
+    border-radius: 6px;
+    padding: 12px 16px;
+    border-left: 2px solid var(--blue);
+  }
+  .summary-box .s-label { font-size: 11px; color: var(--blue); letter-spacing: .1em; margin-bottom: 6px; }
+  .summary-box .s-text { font-size: 13px; color: #cbd5e1; line-height: 1.7; }
+
+  /* Products */
+  #products-row { display: flex; flex-wrap: wrap; gap: 8px; align-items: center; margin-bottom: 14px; }
+  #products-row .p-label { font-size: 10px; color: var(--text4); letter-spacing: .1em; }
+  .product-tag {
+    font-size: 11px;
+    background: var(--bg3);
+    border: 1px solid #1e3a5f;
+    border-radius: 4px;
+    padding: 3px 10px;
+    color: var(--blue-light);
+  }
+
+  /* Sections grid */
+  #sections-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-bottom: 14px; }
+  .section-card {
+    background: var(--bg2);
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    padding: 14px 16px;
+    animation: fadeUp .35s ease both;
+    transition: border-color .2s;
+  }
+  .section-card:hover { border-color: var(--border3); }
+  .sc-top { display: flex; justify-content: space-between; align-items: center; margin-bottom: 8px; }
+  .sc-title { font-size: 12px; font-weight: 500; color: var(--text1); }
+  .sc-tag { font-size: 9px; padding: 2px 7px; border-radius: 3px; letter-spacing: .05em; }
+  .sc-content { font-size: 12px; color: var(--text3); line-height: 1.65; }
+
+  /* Timeline */
+  .timeline-box {
+    background: var(--bg2);
+    border: 1px solid var(--border);
+    border-radius: 10px;
+    padding: 16px 20px;
+    margin-bottom: 14px;
+  }
+  .timeline-grid { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 14px; }
+  .tl-item { border-left: 2px solid; padding-left: 12px; }
+  .tl-label { font-size: 10px; letter-spacing: .1em; margin-bottom: 6px; }
+  .tl-text { font-size: 11px; color: var(--text3); line-height: 1.6; }
+
+  /* Actions */
+  .actions-box {
+    background: var(--bg2);
+    border: 1px solid var(--border);
+    border-radius: 10px;
+    padding: 16px 20px;
+  }
+  .actions-grid { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 10px; }
+  .action-card {
+    background: var(--bg0);
+    border: 1px solid var(--border);
+    border-radius: 7px;
+    padding: 12px 14px;
+    transition: all .2s;
+  }
+  .action-card:hover { border-color: var(--border2); background: var(--bg3); }
+  .ac-label { font-size: 10px; letter-spacing: .1em; margin-bottom: 6px; }
+  .ac-text { font-size: 11px; color: var(--text3); line-height: 1.65; }
+
+  /* History */
+  #history-section { margin-top: 28px; display: none; }
+  #history-section.show { display: block; }
+  #history-list { display: flex; flex-direction: column; gap: 6px; }
+  .history-item {
+    background: var(--bg2);
+    border: 1px solid var(--border);
+    border-radius: 6px;
+    padding: 10px 16px;
+    color: var(--text3);
+    font-size: 11px;
+    cursor: pointer;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    transition: all .2s;
+    font-family: 'DM Mono', monospace;
+    width: 100%;
+    text-align: left;
+  }
+  .history-item:hover { border-color: var(--border3); color: var(--text2); }
+
+  /* Empty */
+  #empty { text-align: center; padding: 80px 0; color: var(--text5); }
+  #empty .e-icon { font-size: 48px; margin-bottom: 16px; opacity: .4; }
+  #empty .e-title { font-size: 12px; letter-spacing: .15em; color: var(--text5); }
+  #empty .e-sub { font-size: 11px; color: var(--border2); margin-top: 8px; }
+
+  /* Divider */
+  .divider { height: 1px; background: var(--border); margin: 4px 0 16px; }
+
+  /* Animations */
+  @keyframes pulseRing { 0%{transform:scale(1);opacity:.3} 100%{transform:scale(2.5);opacity:0} }
+  @keyframes fadeUp { from{opacity:0;transform:translateY(12px)} to{opacity:1;transform:translateY(0)} }
+
+  /* Responsive */
+  @media (max-width: 640px) {
+    #modules { grid-template-columns: repeat(2, 1fr); }
+    #sections-grid { grid-template-columns: 1fr; }
+    .timeline-grid, .actions-grid { grid-template-columns: 1fr; }
+    #header { padding: 14px 16px; }
+    #app { padding: 16px; }
+  }
+</style>
+</head>
+<body>
+
+<!-- Header -->
+<div id="header">
+  <div>
+    <div class="brand">Hanwha Advanced Materials</div>
+    <div class="sub">MARKET INTELLIGENCE SYSTEM · AI-POWERED</div>
+  </div>
+  <div class="live">
+    <div class="pulse-ring"><div class="ring"></div><div class="dot"></div></div>
+    <span>LIVE</span>
+    <span style="margin:0 4px;color:var(--border2)">|</span>
+    <span id="today-date"></span>
+  </div>
+</div>
+
+<div id="app">
+
+  <!-- API Key Setup -->
+  <div id="api-setup">
+    <div class="label">API KEY SETUP</div>
+    <div class="desc">
+      Anthropic API 키를 입력하세요. 키는 브라우저 로컬에만 저장되며 서버로 전송되지 않습니다.<br>
+      키 발급: <a href="https://console.anthropic.com/settings/keys" target="_blank">console.anthropic.com</a>
+      &nbsp;·&nbsp; 무료 크레딧 $5 제공 (약 6개월 주 1회 리포트 가능)
+    </div>
+    <div class="input-row">
+      <input type="password" id="api-key-input" class="api-input" placeholder="sk-ant-api03-..." />
+      <button class="btn-save" onclick="saveApiKey()">저장</button>
+    </div>
+    <div id="api-status"></div>
+  </div>
+
+  <!-- Analysis Modules -->
+  <div class="section-label">ANALYSIS MODULE</div>
+  <div id="modules">
+    <button class="topic-btn" id="btn-weekly" onclick="runTopic('weekly')">
+      <div class="icon">◈</div>
+      <div class="name">주간 종합</div>
+    </button>
+    <button class="topic-btn" id="btn-ev" onclick="runTopic('ev')">
+      <div class="icon">⬡</div>
+      <div class="name">EV / 정책</div>
+    </button>
+    <button class="topic-btn" id="btn-oem" onclick="runTopic('oem')">
+      <div class="icon">◉</div>
+      <div class="name">OEM 동향</div>
+    </button>
+    <button class="topic-btn" id="btn-materials" onclick="runTopic('materials')">
+      <div class="icon">◆</div>
+      <div class="name">소재 기술</div>
+    </button>
+  </div>
+
+  <!-- Custom Query -->
+  <button id="custom-toggle" onclick="toggleCustom()">+ 직접 질문 입력</button>
+  <div id="custom-area">
+    <textarea id="custom-input" rows="2" placeholder="예: 현대차 아이오닉9 출시가 한화첨단소재 경량소재 수요에 미치는 영향은?"></textarea>
+    <div class="custom-btns">
+      <button class="btn-run" onclick="runCustom()">실행</button>
+      <button class="btn-cancel" onclick="toggleCustom()">취소</button>
+    </div>
+  </div>
+
+  <!-- Error -->
+  <div id="error-box"></div>
+
+  <!-- Loading -->
+  <div id="loading">
+    <div class="spinner-wrap">
+      <div class="spinner-ring" style="inset:0;animation-duration:1.2s"></div>
+      <div class="spinner-ring" style="inset:8px;animation-duration:1.6s;animation-delay:.2s"></div>
+      <div class="spinner-ring" style="inset:16px;animation-duration:2s;animation-delay:.4s"></div>
+      <div class="spinner-dot"></div>
+    </div>
+    <div class="load-title">WEB SEARCH + AI ANALYSIS</div>
+    <div class="load-sub">한화첨단소재 관점 시사점 도출 중...</div>
+  </div>
+
+  <!-- Result -->
+  <div id="result">
+    <!-- Report Header -->
+    <div class="report-header">
+      <div class="rh-top">
+        <div>
+          <div class="rh-eyebrow">INTELLIGENCE REPORT</div>
+          <div class="rh-title" id="r-title"></div>
+          <div class="rh-time" id="r-time"></div>
+        </div>
+        <div class="rh-impact">
+          <div class="impact-label">IMPACT SCORE</div>
+          <div class="impact-value" id="r-impact"></div>
+          <div class="impact-bar-track"><div class="impact-bar" id="r-impact-bar"></div></div>
+        </div>
+      </div>
+      <div class="summary-box">
+        <div class="s-label">EXECUTIVE SUMMARY</div>
+        <div class="s-text" id="r-summary"></div>
+      </div>
+    </div>
+
+    <!-- Products -->
+    <div id="products-row"></div>
+
+    <!-- Sections -->
+    <div id="sections-grid"></div>
+
+    <!-- Timeline -->
+    <div class="timeline-box">
+      <div class="section-label">TIMELINE OUTLOOK</div>
+      <div class="timeline-grid">
+        <div class="tl-item" style="border-color:#22c55e">
+          <div class="tl-label" style="color:#22c55e">단기 6M</div>
+          <div class="tl-text" id="r-short"></div>
+        </div>
+        <div class="tl-item" style="border-color:#f59e0b">
+          <div class="tl-label" style="color:#f59e0b">중기 2Y</div>
+          <div class="tl-text" id="r-mid"></div>
+        </div>
+        <div class="tl-item" style="border-color:#a78bfa">
+          <div class="tl-label" style="color:#a78bfa">장기 5Y</div>
+          <div class="tl-text" id="r-long"></div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Actions -->
+    <div class="actions-box" style="margin-top:14px">
+      <div class="section-label">ACTION ITEMS</div>
+      <div class="actions-grid">
+        <div class="action-card">
+          <div class="ac-label" style="color:#3b82f6">◈ 영업팀</div>
+          <div class="ac-text" id="r-sales"></div>
+        </div>
+        <div class="action-card">
+          <div class="ac-label" style="color:#a78bfa">◆ R&D팀</div>
+          <div class="ac-text" id="r-rd"></div>
+        </div>
+        <div class="action-card">
+          <div class="ac-label" style="color:#f59e0b">◉ 경영진</div>
+          <div class="ac-text" id="r-management"></div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Empty State -->
+  <div id="empty">
+    <div class="e-icon">◈</div>
+    <div class="e-title">ANALYSIS MODULE READY</div>
+    <div class="e-sub">위 버튼을 클릭해 분석을 시작하세요</div>
+  </div>
+
+  <!-- History -->
+  <div id="history-section">
+    <div class="divider"></div>
+    <div class="section-label">RECENT ANALYSES</div>
+    <div id="history-list"></div>
+  </div>
+
+</div><!-- /app -->
+
+<script>
+// ── Config ──────────────────────────────────────────
+const SYSTEM_PROMPT = `당신은 한화첨단소재의 시장 인텔리전스 수석 분석가입니다.
+
+한화첨단소재 주요 제품군:
+- 경량복합소재: CFRP, GFRP, 열가소성 복합재
+- 배터리 소재: 배터리 케이스, 팩 구조재, 열관리 소재
+- 자동차 내외장: 범퍼빔, 도어모듈, 루프패널
+- 방산/항공: 구조용 복합재
+
+분석 시 반드시:
+1. 각 뉴스/트렌드가 어느 제품군에 영향을 주는지 명확히 매핑
+2. 영향도를 HIGH/MEDIUM/LOW로 스코어링
+3. 단기(6개월)/중기(2년)/장기(5년) 시사점 분리
+4. 경쟁사(도레이, Hexcel, SGL) 대비 기회/위협 구분
+5. 영업/R&D/경영진 관점 액션 아이템 제시
+
+반드시 아래 JSON 형식만 반환하세요. 마크다운 코드블록 없이 순수 JSON만:
+{
+  "summary": "3줄 이내 핵심 요약",
+  "impact_score": "HIGH 또는 MEDIUM 또는 LOW",
+  "sections": [
+    {"title": "섹션 제목", "content": "분석 내용 2-3문장", "tag": "EV동향 또는 OEM동향 또는 정책변화 또는 소재기술 또는 경쟁사 또는 수요예측"}
+  ],
+  "products_affected": ["영향받는 제품군"],
+  "actions": {"sales": "영업팀 액션", "rd": "R&D팀 액션", "management": "경영진 액션"},
+  "timeline": {"short": "6개월 시사점", "mid": "2년 시사점", "long": "5년 시사점"}
+}`;
+
+const TOPICS = {
+  weekly: {
+    label: "주간 종합",
+    prompt: `오늘 날짜 기준 최근 1주일간 글로벌 자동차 및 전기차 산업의 주요 동향을 웹 검색으로 조사하고, 한화첨단소재 관점에서 소재 수요에 미치는 영향을 분석하세요. EV 판매 동향, OEM 신차 발표, 배터리 기술 변화, 경량화 트렌드를 포함해주세요.`
+  },
+  ev: {
+    label: "EV / 정책",
+    prompt: `최근 글로벌 전기차 시장 동향과 각국 EV 정책 변화(IRA, EU 규제, 중국 보조금 등)를 웹 검색으로 조사하고, 한화첨단소재의 배터리 케이스·경량복합소재 수요에 미치는 영향을 분석하세요.`
+  },
+  oem: {
+    label: "OEM 동향",
+    prompt: `최근 현대/기아, BMW, GM, Toyota, Tesla, BYD 등 주요 OEM의 신차 출시, 플랫폼 변경, 소재 채용 발표를 웹 검색으로 조사하고, 한화첨단소재의 자동차 내외장 및 경량소재 사업 기회를 분석하세요.`
+  },
+  materials: {
+    label: "소재 기술",
+    prompt: `최근 자동차·항공 경량복합소재 기술 트렌드, CFRP/GFRP 시장 변화, 경쟁사(도레이, Hexcel, SGL, Solvay) 동향을 웹 검색으로 조사하고, 한화첨단소재의 기술 포지셔닝과 R&D 방향을 분석하세요.`
+  }
+};
+
+const TAG_COLORS = {
+  "EV동향":  { bg:"#0f3460", color:"#4fc3f7" },
+  "OEM동향": { bg:"#1a1a2e", color:"#a78bfa" },
+  "정책변화": { bg:"#0d2137", color:"#34d399" },
+  "소재기술": { bg:"#2d1515", color:"#f87171" },
+  "경쟁사":  { bg:"#1f2937", color:"#fbbf24" },
+  "수요예측": { bg:"#0f2027", color:"#38bdf8" }
+};
+
+const IMPACT_MAP = {
+  HIGH:   { color:"#ef4444", bar:100 },
+  MEDIUM: { color:"#f59e0b", bar:60  },
+  LOW:    { color:"#6b7280", bar:30  }
+};
+
+// ── State ──────────────────────────────────────────
+let history = [];
+let currentResult = null;
+let activeTopic = null;
+
+// ── Init ──────────────────────────────────────────
+document.getElementById("today-date").textContent =
+  new Date().toLocaleDateString("ko-KR");
+
+// Load saved API key
+const savedKey = localStorage.getItem("hanwha_api_key");
+if (savedKey) {
+  document.getElementById("api-key-input").value = savedKey;
+  setApiStatus(true);
+}
+
+function saveApiKey() {
+  const val = document.getElementById("api-key-input").value.trim();
+  if (!val.startsWith("sk-ant-")) {
+    setApiStatus(false, "올바른 Anthropic API 키 형식이 아닙니다 (sk-ant- 로 시작)");
+    return;
+  }
+  localStorage.setItem("hanwha_api_key", val);
+  setApiStatus(true);
+}
+
+function setApiStatus(ok, msg) {
+  const el = document.getElementById("api-status");
+  if (ok) {
+    el.style.color = "#22c55e";
+    el.textContent = "✓ API 키가 저장되었습니다";
+  } else {
+    el.style.color = "#f87171";
+    el.textContent = "✗ " + (msg || "오류");
+  }
+}
+
+// ── Custom Toggle ──────────────────────────────────
+function toggleCustom() {
+  const area = document.getElementById("custom-area");
+  const btn  = document.getElementById("custom-toggle");
+  const open = area.classList.toggle("open");
+  btn.style.display = open ? "none" : "block";
+  if (open) document.getElementById("custom-input").focus();
+}
+
+function runCustom() {
+  const q = document.getElementById("custom-input").value.trim();
+  if (!q) return;
+  const label = q.slice(0, 22) + (q.length > 22 ? "…" : "");
+  const prompt = q + "\n\n웹 검색으로 최신 정보를 조사하고 한화첨단소재 관점에서 분석하세요.";
+  document.getElementById("custom-area").classList.remove("open");
+  document.getElementById("custom-toggle").style.display = "block";
+  document.getElementById("custom-input").value = "";
+  runAnalysis(prompt, "custom", label);
+}
+
+// ── Run Topic ──────────────────────────────────────
+function runTopic(id) {
+  const t = TOPICS[id];
+  if (!t) return;
+  document.querySelectorAll(".topic-btn").forEach(b => b.classList.remove("active"));
+  document.getElementById("btn-" + id).classList.add("active");
+  runAnalysis(t.prompt, id, t.label);
+}
+
+// ── Core Analysis ──────────────────────────────────
+async function runAnalysis(prompt, topicId, topicLabel) {
+  const apiKey = localStorage.getItem("hanwha_api_key");
+  if (!apiKey) {
+    showError("API 키를 먼저 입력하고 저장해주세요.");
+    return;
+  }
+
+  activeTopic = topicId;
+  setView("loading");
+
+  try {
+    const res = await fetch("https://api.anthropic.com/v1/messages", {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        "x-api-key": apiKey,
+        "anthropic-version": "2023-06-01",
+        "anthropic-dangerous-direct-browser-access": "true"
+      },
+      body: JSON.stringify({
+        model: "claude-haiku-4-5-20251001",
+        max_tokens: 1500,
+        system: SYSTEM_PROMPT,
+        tools: [{ type: "web_search_20250305", name: "web_search" }],
+        messages: [{ role: "user", content: prompt }]
+      })
+    });
+
+    if (!res.ok) {
+      const err = await res.json().catch(() => ({}));
+      throw new Error(err.error?.message || `HTTP ${res.status}`);
+    }
+
+    const data = await res.json();
+    const fullText = (data.content || [])
+      .filter(b => b.type === "text")
+      .map(b => b.text)
+      .join("");
+
+    const clean = fullText.replace(/```json|```/g, "").trim();
+    const parsed = JSON.parse(clean);
+
+    const entry = {
+      id: Date.now(),
+      topic: topicLabel,
+      topicId,
+      timestamp: new Date().toLocaleTimeString("ko-KR", { hour:"2-digit", minute:"2-digit" }),
+      data: parsed
+    };
+
+    currentResult = entry;
+    history.unshift(entry);
+    if (history.length > 5) history.pop();
+
+    renderResult(entry);
+    renderHistory();
+    setView("result");
+
+  } catch (e) {
+    console.error(e);
+    if (e.message.includes("401")) {
+      showError("API 키가 올바르지 않습니다. 키를 다시 확인해주세요.");
+    } else if (e.message.includes("429")) {
+      showError("요청 한도를 초과했습니다. 잠시 후 다시 시도해주세요.");
+    } else {
+      showError("분석 중 오류가 발생했습니다: " + e.message);
+    }
+    setView("error");
+  }
+}
+
+// ── Render Result ──────────────────────────────────
+function renderResult(entry) {
+  const d = entry.data;
+
+  document.getElementById("r-title").textContent = entry.topic;
+  document.getElementById("r-time").textContent = entry.timestamp;
+
+  // Impact
+  const imp = IMPACT_MAP[d.impact_score] || IMPACT_MAP.MEDIUM;
+  const impEl = document.getElementById("r-impact");
+  impEl.textContent = d.impact_score || "–";
+  impEl.style.color = imp.color;
+  const bar = document.getElementById("r-impact-bar");
+  bar.style.background = imp.color;
+  setTimeout(() => { bar.style.width = imp.bar + "%"; }, 100);
+
+  // Summary
+  document.getElementById("r-summary").textContent = d.summary || "";
+
+  // Products
+  const prodRow = document.getElementById("products-row");
+  if (d.products_affected?.length) {
+    prodRow.innerHTML = `<span class="p-label">영향 제품군:</span>` +
+      d.products_affected.map(p => `<span class="product-tag">${p}</span>`).join("");
+    prodRow.style.display = "flex";
+  } else {
+    prodRow.style.display = "none";
+  }
+
+  // Sections
+  const grid = document.getElementById("sections-grid");
+  grid.innerHTML = (d.sections || []).map((s, i) => {
+    const tc = TAG_COLORS[s.tag] || { bg:"#1a2438", color:"#94a3b8" };
+    return `<div class="section-card" style="animation-delay:${i*0.07}s">
+      <div class="sc-top">
+        <div class="sc-title">${s.title}</div>
+        <span class="sc-tag" style="background:${tc.bg};color:${tc.color}">${s.tag}</span>
+      </div>
+      <div class="sc-content">${s.content}</div>
+    </div>`;
+  }).join("");
+
+  // Timeline
+  document.getElementById("r-short").textContent = d.timeline?.short || "";
+  document.getElementById("r-mid").textContent   = d.timeline?.mid   || "";
+  document.getElementById("r-long").textContent  = d.timeline?.long  || "";
+
+  // Actions
+  document.getElementById("r-sales").textContent      = d.actions?.sales      || "";
+  document.getElementById("r-rd").textContent          = d.actions?.rd          || "";
+  document.getElementById("r-management").textContent  = d.actions?.management  || "";
+}
+
+// ── Render History ──────────────────────────────────
+function renderHistory() {
+  if (history.length <= 1) return;
+  const section = document.getElementById("history-section");
+  const list    = document.getElementById("history-list");
+  section.classList.add("show");
+  list.innerHTML = history.slice(1).map(h => {
+    const imp = IMPACT_MAP[h.data.impact_score] || IMPACT_MAP.LOW;
+    return `<button class="history-item" onclick="restoreHistory(${h.id})">
+      <span>${h.topic}</span>
+      <span style="display:flex;gap:10px;align-items:center">
+        <span style="color:${imp.color};font-size:10px">${h.data.impact_score}</span>
+        <span style="color:var(--border2)">${h.timestamp}</span>
+      </span>
+    </button>`;
+  }).join("");
+}
+
+function restoreHistory(id) {
+  const entry = history.find(h => h.id === id);
+  if (!entry) return;
+  currentResult = entry;
+  renderResult(entry);
+  setView("result");
+  window.scrollTo({ top: 0, behavior: "smooth" });
+}
+
+// ── View State ──────────────────────────────────────
+function setView(state) {
+  document.getElementById("loading").classList.toggle("show", state === "loading");
+  document.getElementById("result").classList.toggle("show",  state === "result");
+  document.getElementById("empty").style.display   = state === "empty"  ? "block" : "none";
+  document.getElementById("error-box").classList.toggle("show", state === "error");
+}
+
+function showError(msg) {
+  const el = document.getElementById("error-box");
+  el.innerHTML = "⚠ " + msg;
+  setView("error");
+}
+
+// Enter key on custom input
+document.getElementById("custom-input").addEventListener("keydown", e => {
+  if (e.key === "Enter" && !e.shiftKey) { e.preventDefault(); runCustom(); }
+});
+
+// Enter key on API key input
+document.getElementById("api-key-input").addEventListener("keydown", e => {
+  if (e.key === "Enter") saveApiKey();
+});
+</script>
+
+</body>
+</html>
