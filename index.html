@@ -27,7 +27,7 @@ body{font-family:'Pretendard','Apple SD Gothic Neo',sans-serif;color:var(--ink);
 ::-webkit-scrollbar-track{background:var(--stone)}
 ::-webkit-scrollbar-thumb{background:var(--stone2);border-radius:3px}
 
-/* ── HEADER (원본 그대로) ── */
+/* ── HEADER ── */
 #header{
   background:var(--white);border-bottom:1px solid var(--border);
   padding:0 40px;display:flex;align-items:center;justify-content:space-between;
@@ -41,39 +41,35 @@ body{font-family:'Pretendard','Apple SD Gothic Neo',sans-serif;color:var(--ink);
 }
 .brand{font-family:'Playfair Display',serif;font-size:15px;font-weight:700;color:var(--ink)}
 .sub-text{font-size:10px;color:var(--ink4);letter-spacing:.12em;text-transform:uppercase;margin-top:1px}
+.header-right{display:flex;align-items:center;gap:16px}
 .live-badge{display:flex;align-items:center;gap:6px;font-size:11px;color:var(--ink3);background:var(--stone);padding:5px 10px;border-radius:20px;border:1px solid var(--border)}
 .live-dot{width:7px;height:7px;border-radius:50%;background:#22c55e;animation:livePulse 2s ease infinite}
+#today-date{font-size:12px;color:var(--ink3)}
 
 /* ── APP ── */
 #app{max-width:1000px;margin:0 auto;padding:36px 24px}
 
-/* ── API SETUP (원본 그대로) ── */
-#api-setup{
-  background:var(--white);border:1px solid var(--border);border-radius:16px;
-  padding:24px 28px;margin-bottom:28px;box-shadow:var(--shadow);
+/* ── PRELOAD STATUS BAR ── */
+#preload-bar{
+  background:var(--white);border:1px solid var(--border);border-radius:14px;
+  padding:14px 20px;margin-bottom:20px;box-shadow:var(--shadow);
+  display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:10px;
 }
-.setup-header{display:flex;align-items:center;gap:10px;margin-bottom:12px}
-.setup-icon{width:32px;height:32px;background:var(--orange-bg);border-radius:8px;display:flex;align-items:center;justify-content:center;font-size:15px}
-.setup-title{font-size:14px;font-weight:600}
-.setup-desc{font-size:12.5px;color:var(--ink3);line-height:1.7;margin-bottom:14px}
-.setup-desc a{color:var(--orange);text-decoration:none;font-weight:500}
-.setup-desc a:hover{text-decoration:underline}
-.input-row{display:flex;gap:8px}
-.api-input{
-  flex:1;background:var(--stone);border:1.5px solid var(--border);border-radius:10px;
-  color:var(--ink);font-size:13px;font-family:'Pretendard',sans-serif;
-  padding:10px 14px;outline:none;transition:all .2s;
+.pb-title{font-size:12px;font-weight:600;color:var(--ink3)}
+.pb-status{display:flex;gap:8px;flex-wrap:wrap}
+.pb-chip{
+  font-size:11px;padding:3px 10px;border-radius:20px;
+  border:1px solid var(--border);background:var(--stone);
+  color:var(--ink4);display:flex;align-items:center;gap:5px;
+  transition:all .3s;
 }
-.api-input:focus{border-color:var(--orange);background:var(--white);box-shadow:0 0 0 3px rgba(232,84,26,.1)}
-.btn-save{
-  background:var(--ink);border:none;border-radius:10px;color:var(--white);
-  font-size:13px;font-family:'Pretendard',sans-serif;font-weight:500;
-  padding:10px 22px;cursor:pointer;transition:all .2s;white-space:nowrap;
-}
-.btn-save:hover{background:var(--orange)}
-#api-status{font-size:12px;margin-top:8px;min-height:18px}
+.pb-chip.loading{border-color:#fde68a;background:var(--amber-bg);color:var(--amber)}
+.pb-chip.done{border-color:#a7f3d0;background:var(--green-bg);color:var(--green)}
+.pb-chip.error{border-color:#fecaca;background:var(--red-bg);color:var(--red)}
+.pb-dot{width:6px;height:6px;border-radius:50%;background:currentColor}
+.pb-dot.spin{animation:spin .7s linear infinite;border-radius:0;width:8px;height:8px;border:2px solid currentColor;border-top-color:transparent;background:transparent}
 
-/* ── MODULES (원본 그대로) ── */
+/* ── MODULES ── */
 .sec-label{font-size:10.5px;font-weight:600;color:var(--ink4);letter-spacing:.14em;text-transform:uppercase;margin-bottom:12px}
 #modules{display:grid;grid-template-columns:repeat(4,1fr);gap:10px;margin-bottom:10px}
 .topic-btn{
@@ -85,10 +81,13 @@ body{font-family:'Pretendard','Apple SD Gothic Neo',sans-serif;color:var(--ink);
 .topic-btn:hover{border-color:var(--orange2);box-shadow:0 4px 16px rgba(232,84,26,.12);transform:translateY(-1px)}
 .topic-btn:hover::after,.topic-btn.active::after{opacity:1}
 .topic-btn.active{border-color:var(--orange);background:var(--orange-bg);box-shadow:0 4px 20px rgba(232,84,26,.15)}
+.topic-btn.loading-state{border-color:#fde68a;background:var(--amber-bg)}
 .topic-btn .t-icon{font-size:22px;margin-bottom:8px;display:block}
 .topic-btn .t-name{font-size:13px;font-weight:600;color:var(--ink2);position:relative;z-index:1}
 .topic-btn .t-desc{font-size:11px;color:var(--ink4);margin-top:3px;position:relative;z-index:1}
 .topic-btn:hover .t-name,.topic-btn.active .t-name{color:var(--orange)}
+.topic-btn .t-ready{font-size:9px;color:var(--green);margin-top:4px;font-weight:600;display:none}
+.topic-btn.done .t-ready{display:block}
 
 #custom-toggle{
   width:100%;background:transparent;border:1.5px dashed var(--stone2);border-radius:12px;
@@ -105,20 +104,21 @@ body{font-family:'Pretendard','Apple SD Gothic Neo',sans-serif;color:var(--ink);
 }
 #custom-input:focus{border-color:var(--orange);box-shadow:0 0 0 3px rgba(232,84,26,.1)}
 .custom-btns{display:flex;flex-direction:column;gap:6px}
-.btn-run{background:var(--orange);border:none;border-radius:9px;color:#fff;padding:9px 18px;font-size:12px;font-family:'Pretendard',sans-serif;font-weight:500;cursor:pointer;transition:.2s}
+.btn-run{background:var(--orange);border:none;border-radius:9px;color:#fff;padding:9px 18px;font-size:12px;font-family:'Pretendard',sans-serif;font-weight:500;cursor:pointer;transition:.2s;white-space:nowrap}
 .btn-run:hover{background:var(--orange2)}
+.btn-run:disabled{background:var(--stone2);cursor:not-allowed}
 .btn-cancel{background:transparent;border:1.5px solid var(--border);border-radius:9px;color:var(--ink4);padding:9px 18px;font-size:12px;font-family:'Pretendard',sans-serif;cursor:pointer;transition:.2s}
 .btn-cancel:hover{border-color:var(--ink4);color:var(--ink3)}
 
-/* ── LOADING (원본 그대로) ── */
-#loading{display:none;text-align:center;padding:80px 0}
-#loading.show{display:block}
-.spin-outer{width:56px;height:56px;margin:0 auto 20px;position:relative}
+/* ── LOADING INLINE (custom query용) ── */
+#custom-loading{display:none;text-align:center;padding:40px 0}
+#custom-loading.show{display:block}
+.spin-outer{width:44px;height:44px;margin:0 auto 14px;position:relative}
 .spin-ring{position:absolute;inset:0;border-radius:50%;border:2px solid transparent;border-top-color:var(--orange);animation:spin 1s linear infinite}
-.spin-ring2{position:absolute;inset:8px;border-radius:50%;border:2px solid transparent;border-top-color:var(--stone2);animation:spin .7s linear infinite reverse}
-.spin-core{position:absolute;inset:18px;border-radius:50%;background:var(--orange)}
-.load-title{font-size:14px;font-weight:600;color:var(--ink2)}
-.load-sub{font-size:12px;color:var(--ink4);margin-top:5px}
+.spin-ring2{position:absolute;inset:7px;border-radius:50%;border:2px solid transparent;border-top-color:var(--stone2);animation:spin .7s linear infinite reverse}
+.spin-core{position:absolute;inset:16px;border-radius:50%;background:var(--orange)}
+.load-title{font-size:13px;font-weight:600;color:var(--ink2)}
+.load-sub{font-size:11.5px;color:var(--ink4);margin-top:4px}
 
 #error-box{display:none;background:var(--red-bg);border:1.5px solid #fecaca;border-radius:12px;padding:14px 18px;color:var(--red);font-size:13px;margin-bottom:16px;line-height:1.6}
 #error-box.show{display:block}
@@ -127,7 +127,6 @@ body{font-family:'Pretendard','Apple SD Gothic Neo',sans-serif;color:var(--ink);
 #result{display:none}
 #result.show{display:block;animation:fadeUp .4s ease}
 
-/* ── REPORT CARD (원본 기반 + 메타 추가) ── */
 .report-card{
   background:var(--white);border:1px solid var(--border);border-radius:20px;
   padding:28px 32px;margin-bottom:14px;box-shadow:var(--shadow-lg);
@@ -142,81 +141,57 @@ body{font-family:'Pretendard','Apple SD Gothic Neo',sans-serif;color:var(--ink);
 .impact-track{width:72px;height:3px;background:var(--stone2);border-radius:2px;margin-top:8px;margin-left:auto}
 .impact-fill{height:100%;border-radius:2px;transition:width 1s ease}
 
-/* ── META BAR (신규) ── */
-.meta-bar{
-  display:flex;flex-wrap:wrap;gap:8px;align-items:center;
-  padding:10px 14px;background:var(--stone);border-radius:10px;
-  margin-bottom:14px;
-}
-.meta-item{
-  display:flex;align-items:center;gap:5px;
-  font-size:11px;color:var(--ink3);
-  background:var(--white);border:1px solid var(--border);
-  border-radius:20px;padding:3px 10px;
-}
-.meta-item .mi-icon{font-size:11px}
+/* 메타 바 */
+.meta-bar{display:flex;flex-wrap:wrap;gap:8px;align-items:center;padding:10px 14px;background:var(--stone);border-radius:10px;margin-bottom:14px}
+.meta-item{display:flex;align-items:center;gap:5px;font-size:11px;color:var(--ink3);background:var(--white);border:1px solid var(--border);border-radius:20px;padding:3px 10px}
 .meta-item .mi-val{font-weight:600;color:var(--ink2)}
 .meta-item.ai-warn{background:var(--amber-bg);border-color:#fde68a}
 .meta-item.ai-warn .mi-val{color:var(--amber)}
-
-/* accuracy bar inside meta */
 .acc-wrap{display:flex;align-items:center;gap:5px}
 .acc-bar{height:4px;width:56px;background:var(--stone2);border-radius:2px;overflow:hidden}
 .acc-fill{height:100%;border-radius:2px;transition:width 1.2s ease .2s}
 .acc-pct{font-size:11px;font-weight:600;font-family:'JetBrains Mono',monospace}
 
-/* ── SOURCE ROW (신규) ── */
-.source-row{
-  display:flex;flex-wrap:wrap;gap:5px;align-items:center;
-  margin-bottom:14px;
-}
+/* 출처 */
+.source-row{display:flex;flex-wrap:wrap;gap:5px;align-items:center;margin-bottom:14px}
 .src-label{font-size:10.5px;color:var(--ink4);font-weight:500;margin-right:2px}
 .src-chip{font-size:10.5px;padding:2px 9px;border-radius:20px;border:1px solid;font-weight:500}
-.src-chip.company {background:var(--orange-bg);border-color:#fed7aa;color:var(--orange)}
-.src-chip.market   {background:var(--blue-bg);border-color:#c5d9f7;color:var(--blue)}
-.src-chip.ai       {background:var(--amber-bg);border-color:#fde68a;color:var(--amber)}
+.src-chip.market    {background:var(--blue-bg);border-color:#c5d9f7;color:var(--blue)}
+.src-chip.ai        {background:var(--amber-bg);border-color:#fde68a;color:var(--amber)}
 .src-chip.regulatory{background:var(--purple-bg);border-color:#ddd6fe;color:var(--purple)}
-.src-chip.official {background:var(--green-bg);border-color:#a7f3d0;color:var(--green)}
+.src-chip.official  {background:var(--green-bg);border-color:#a7f3d0;color:var(--green)}
+.src-chip.company   {background:var(--orange-bg);border-color:#fed7aa;color:var(--orange)}
 
-/* ── SUMMARY STRIP (원본 그대로) ── */
+/* Summary */
 .summary-strip{background:linear-gradient(135deg,var(--orange-bg),var(--cream));border-radius:12px;padding:14px 18px;border-left:3px solid var(--orange)}
 .ss-label{font-size:10px;font-weight:600;color:var(--orange);letter-spacing:.12em;text-transform:uppercase;margin-bottom:6px}
 .ss-text{font-size:13.5px;color:var(--ink2);line-height:1.75}
 
-/* ── PRODUCTS ROW (원본 그대로) ── */
 #products-row{display:flex;flex-wrap:wrap;gap:7px;align-items:center;margin-bottom:14px}
 .p-label{font-size:11px;color:var(--ink4);font-weight:500}
 .product-tag{font-size:11.5px;background:var(--blue-bg);border:1px solid #c5d9f7;border-radius:20px;padding:3px 11px;color:var(--blue);font-weight:500}
 
-/* ── SECTIONS GRID (원본 기반 + 섹션 하단 메타 추가) ── */
+/* Sections */
 #sections-grid{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:14px}
-.section-card{
-  background:var(--white);border:1px solid var(--border);border-radius:14px;
-  padding:16px 18px;box-shadow:var(--shadow);animation:fadeUp .3s ease both;transition:all .2s;
-}
+.section-card{background:var(--white);border:1px solid var(--border);border-radius:14px;padding:16px 18px;box-shadow:var(--shadow);animation:fadeUp .3s ease both;transition:all .2s}
 .section-card:hover{box-shadow:var(--shadow-lg);transform:translateY(-1px);border-color:var(--stone2)}
 .sc-top{display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:8px;gap:8px}
 .sc-title{font-size:13px;font-weight:600;color:var(--ink)}
 .sc-tag{font-size:10px;padding:3px 9px;border-radius:20px;font-weight:500;white-space:nowrap}
 .sc-content{font-size:12.5px;color:var(--ink3);line-height:1.7}
-/* 섹션 하단 정확도 + 출처 */
-.sc-meta{
-  display:flex;justify-content:flex-end;align-items:center;
-  gap:6px;margin-top:10px;padding-top:8px;
-  border-top:1px solid var(--stone);
-}
+.sc-meta{display:flex;justify-content:flex-end;align-items:center;gap:6px;margin-top:10px;padding-top:8px;border-top:1px solid var(--stone)}
 .sc-acc-dot{width:6px;height:6px;border-radius:50%;display:inline-block}
 .sc-acc-txt{font-size:10px;color:var(--ink4)}
 .sc-src-chip{font-size:9.5px;padding:1px 7px;border-radius:20px;border:1px solid;font-weight:500}
 
-/* ── TIMELINE (원본 그대로) ── */
+/* Timeline */
 .timeline-card{background:var(--white);border:1px solid var(--border);border-radius:16px;padding:20px 24px;margin-bottom:14px;box-shadow:var(--shadow)}
 .timeline-grid{display:grid;grid-template-columns:1fr 1fr 1fr;gap:12px}
 .tl-item{padding:14px 16px;border-radius:12px;background:var(--stone)}
 .tl-badge{display:inline-block;font-size:10px;font-weight:600;padding:2px 9px;border-radius:20px;margin-bottom:8px;letter-spacing:.05em}
 .tl-text{font-size:12px;color:var(--ink3);line-height:1.65}
 
-/* ── ACTIONS (원본 그대로) ── */
+/* Actions */
 .actions-card{background:var(--white);border:1px solid var(--border);border-radius:16px;padding:20px 24px;box-shadow:var(--shadow)}
 .actions-grid{display:grid;grid-template-columns:1fr 1fr 1fr;gap:10px}
 .action-item{background:var(--stone);border-radius:12px;padding:14px 16px;transition:.2s}
@@ -224,11 +199,8 @@ body{font-family:'Pretendard','Apple SD Gothic Neo',sans-serif;color:var(--ink);
 .ai-label{font-size:10px;font-weight:600;letter-spacing:.1em;text-transform:uppercase;margin-bottom:7px}
 .ai-text{font-size:12px;color:var(--ink3);line-height:1.65}
 
-/* ── ACCURACY LEGEND (신규, 하단 고정) ── */
-.acc-legend{
-  background:var(--white);border:1px solid var(--border);border-radius:14px;
-  padding:16px 20px;margin-top:14px;
-}
+/* Accuracy legend */
+.acc-legend{background:var(--white);border:1px solid var(--border);border-radius:14px;padding:16px 20px;margin-top:14px}
 .acc-legend-title{font-size:10px;font-weight:600;color:var(--ink4);letter-spacing:.13em;text-transform:uppercase;margin-bottom:10px}
 .acc-legend-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:10px}
 .alg-item{display:flex;align-items:flex-start;gap:8px}
@@ -236,30 +208,25 @@ body{font-family:'Pretendard','Apple SD Gothic Neo',sans-serif;color:var(--ink);
 .alg-name{font-size:11.5px;font-weight:600;color:var(--ink2)}
 .alg-desc{font-size:10.5px;color:var(--ink4);margin-top:2px;line-height:1.5}
 
-/* ── HISTORY (원본 그대로) ── */
+/* History */
 #history-section{margin-top:28px;display:none}
 #history-section.show{display:block}
-.history-item{
-  background:var(--white);border:1px solid var(--border);border-radius:10px;
-  padding:11px 16px;color:var(--ink3);font-size:12.5px;cursor:pointer;
-  display:flex;justify-content:space-between;align-items:center;
-  transition:all .2s;font-family:'Pretendard',sans-serif;width:100%;text-align:left;margin-bottom:6px;
-}
+.history-item{background:var(--white);border:1px solid var(--border);border-radius:10px;padding:11px 16px;color:var(--ink3);font-size:12.5px;cursor:pointer;display:flex;justify-content:space-between;align-items:center;transition:all .2s;font-family:'Pretendard',sans-serif;width:100%;text-align:left;margin-bottom:6px}
 .history-item:hover{border-color:var(--orange2);color:var(--ink);box-shadow:var(--shadow)}
 
-/* ── EMPTY (원본 그대로) ── */
-#empty{text-align:center;padding:80px 0}
-.e-icon{font-size:40px;margin-bottom:14px;opacity:.4}
-.e-title{font-family:'Playfair Display',serif;font-size:18px;color:var(--ink3);margin-bottom:6px}
-.e-sub{font-size:12.5px;color:var(--ink5)}
+/* Empty */
+#empty{text-align:center;padding:60px 0;display:none}
+.e-icon{font-size:36px;margin-bottom:12px;opacity:.35}
+.e-title{font-family:'Playfair Display',serif;font-size:17px;color:var(--ink3);margin-bottom:5px}
+.e-sub{font-size:12px;color:var(--ink5)}
 .divider{height:1px;background:var(--border);margin:4px 0 16px}
 
-/* ── KEYFRAMES ── */
+/* Keyframes */
 @keyframes livePulse{0%,100%{opacity:1;transform:scale(1)}50%{opacity:.6;transform:scale(1.3)}}
 @keyframes spin{to{transform:rotate(360deg)}}
 @keyframes fadeUp{from{opacity:0;transform:translateY(10px)}to{opacity:1;transform:translateY(0)}}
 
-/* ── RESPONSIVE ── */
+/* Responsive */
 @media(max-width:640px){
   #modules{grid-template-columns:repeat(2,1fr)}
   #sections-grid{grid-template-columns:1fr}
@@ -271,7 +238,7 @@ body{font-family:'Pretendard','Apple SD Gothic Neo',sans-serif;color:var(--ink);
 </head>
 <body>
 
-<!-- HEADER — 원본과 완전히 동일 -->
+<!-- HEADER -->
 <div id="header">
   <div class="logo-wrap">
     <div class="logo-mark">H</div>
@@ -280,80 +247,77 @@ body{font-family:'Pretendard','Apple SD Gothic Neo',sans-serif;color:var(--ink);
       <div class="sub-text">Market Intelligence · AI Powered</div>
     </div>
   </div>
-  <div style="display:flex;align-items:center;gap:16px">
+  <div class="header-right">
     <div class="live-badge"><div class="live-dot"></div>LIVE</div>
-    <div style="font-size:12px;color:var(--ink3)" id="today-date"></div>
+    <div id="today-date"></div>
   </div>
 </div>
 
 <div id="app">
 
-  <!-- API SETUP -->
-  <div id="api-setup">
-    <div class="setup-header">
-      <div class="setup-icon">🔑</div>
-      <div class="setup-title">Google AI Studio API 키 설정</div>
+  <!-- PRELOAD STATUS -->
+  <div id="preload-bar">
+    <div class="pb-title">📡 분석 준비 상태</div>
+    <div class="pb-status">
+      <div class="pb-chip" id="chip-weekly"><span class="pb-dot"></span>주간 종합</div>
+      <div class="pb-chip" id="chip-ev"><span class="pb-dot"></span>EV / 정책</div>
+      <div class="pb-chip" id="chip-oem"><span class="pb-dot"></span>OEM 동향</div>
+      <div class="pb-chip" id="chip-materials"><span class="pb-dot"></span>소재 기술</div>
     </div>
-    <div class="setup-desc">
-      Google AI Studio API 키를 입력하세요. 키는 브라우저에만 저장되며 서버로 전송되지 않습니다.<br>
-      무료 발급 (Google 계정만 있으면 됨, 카드 불필요):
-      <a href="https://aistudio.google.com/app/apikey" target="_blank">aistudio.google.com/app/apikey</a>
-    </div>
-    <div class="input-row">
-      <input type="password" id="api-key-input" class="api-input" placeholder="AIzaSy..."/>
-      <button class="btn-save" onclick="saveApiKey()">저장</button>
-    </div>
-    <div id="api-status"></div>
   </div>
 
   <!-- MODULES -->
   <div class="sec-label">분석 모듈</div>
   <div id="modules">
-    <button class="topic-btn" id="btn-weekly" onclick="runTopic('weekly')">
+    <button class="topic-btn" id="btn-weekly" onclick="showTopic('weekly')">
       <span class="t-icon">📊</span>
       <div class="t-name">주간 종합</div>
       <div class="t-desc">전체 시장 동향</div>
+      <div class="t-ready">✓ 분석 완료</div>
     </button>
-    <button class="topic-btn" id="btn-ev" onclick="runTopic('ev')">
+    <button class="topic-btn" id="btn-ev" onclick="showTopic('ev')">
       <span class="t-icon">⚡</span>
       <div class="t-name">EV / 정책</div>
       <div class="t-desc">전기차·규제 변화</div>
+      <div class="t-ready">✓ 분석 완료</div>
     </button>
-    <button class="topic-btn" id="btn-oem" onclick="runTopic('oem')">
+    <button class="topic-btn" id="btn-oem" onclick="showTopic('oem')">
       <span class="t-icon">🚗</span>
       <div class="t-name">OEM 동향</div>
       <div class="t-desc">완성차 업체 동향</div>
+      <div class="t-ready">✓ 분석 완료</div>
     </button>
-    <button class="topic-btn" id="btn-materials" onclick="runTopic('materials')">
+    <button class="topic-btn" id="btn-materials" onclick="showTopic('materials')">
       <span class="t-icon">🔬</span>
       <div class="t-name">소재 기술</div>
       <div class="t-desc">CFRP·복합소재</div>
+      <div class="t-ready">✓ 분석 완료</div>
     </button>
   </div>
 
+  <!-- CUSTOM INPUT -->
   <button id="custom-toggle" onclick="toggleCustom()">+ 직접 질문 입력하기</button>
   <div id="custom-area">
     <textarea id="custom-input" rows="2" placeholder="예: 현대차 아이오닉9 출시가 한화첨단소재 경량소재 수요에 미치는 영향은?"></textarea>
     <div class="custom-btns">
-      <button class="btn-run" onclick="runCustom()">분석</button>
+      <button class="btn-run" id="btn-custom-run" onclick="runCustom()">분석</button>
       <button class="btn-cancel" onclick="toggleCustom()">취소</button>
     </div>
   </div>
 
   <div id="error-box"></div>
 
-  <div id="loading">
+  <!-- Custom query loading -->
+  <div id="custom-loading">
     <div class="spin-outer">
       <div class="spin-ring"></div><div class="spin-ring2"></div><div class="spin-core"></div>
     </div>
     <div class="load-title">AI 분석 중...</div>
-    <div class="load-sub">시장 정보를 수집하고 한화첨단소재 관점으로 분석합니다</div>
+    <div class="load-sub">Claude가 시장 정보를 분석합니다</div>
   </div>
 
   <!-- RESULT -->
   <div id="result">
-
-    <!-- Report header card -->
     <div class="report-card">
       <div class="rc-top">
         <div>
@@ -367,37 +331,25 @@ body{font-family:'Pretendard','Apple SD Gothic Neo',sans-serif;color:var(--ink);
           <div class="impact-track"><div class="impact-fill" id="r-impact-bar"></div></div>
         </div>
       </div>
-
-      <!-- 메타 바 : 분석 기간 · 정확도 · 출처 유형 -->
-      <div class="meta-bar" id="meta-bar">
+      <div class="meta-bar">
+        <div class="meta-item"><span>📅</span><span id="mc-period" class="mi-val">—</span></div>
         <div class="meta-item">
-          <span class="mi-icon">📅</span>
-          <span id="mc-period" class="mi-val">—</span>
-        </div>
-        <div class="meta-item">
-          <span class="mi-icon">🎯</span>
+          <span>🎯</span>
           <span style="font-size:11px;color:var(--ink3)">종합 정확도</span>
           <div class="acc-wrap">
             <div class="acc-bar"><div class="acc-fill" id="acc-fill"></div></div>
             <span class="acc-pct" id="acc-pct">—</span>
           </div>
         </div>
-        <div class="meta-item" id="mc-web">
-          <span class="mi-icon">🔍</span>
-          <span class="mi-val">웹 검색 Grounding 적용</span>
-        </div>
+        <div class="meta-item"><span>🤖</span><span class="mi-val">Claude claude-sonnet-4-5</span></div>
         <div class="meta-item ai-warn" id="mc-ai-warn" style="display:none">
-          <span class="mi-icon">⚠</span>
-          <span class="mi-val">일부 AI 추론 포함</span>
+          <span>⚠</span><span class="mi-val">일부 AI 추론 포함</span>
         </div>
       </div>
-
-      <!-- 출처 칩 -->
       <div class="source-row" id="source-row" style="display:none">
         <span class="src-label">출처</span>
         <div id="source-chips"></div>
       </div>
-
       <div class="summary-strip">
         <div class="ss-label">Executive Summary</div>
         <div class="ss-text" id="r-summary"></div>
@@ -443,40 +395,29 @@ body{font-family:'Pretendard','Apple SD Gothic Neo',sans-serif;color:var(--ink);
       </div>
     </div>
 
-    <!-- 정확도 범례 -->
     <div class="acc-legend">
       <div class="acc-legend-title">📊 정확도 기준</div>
       <div class="acc-legend-grid">
         <div class="alg-item">
           <div class="alg-dot" style="background:var(--green)"></div>
-          <div>
-            <div class="alg-name">높음 · 85~95%</div>
-            <div class="alg-desc">Gemini 웹 검색으로 확인된 최신 뉴스·공식 발표 기반</div>
-          </div>
+          <div><div class="alg-name">높음 · 85~95%</div><div class="alg-desc">Claude 웹 검색으로 확인된 최신 뉴스·공식 발표 기반</div></div>
         </div>
         <div class="alg-item">
           <div class="alg-dot" style="background:#d97706"></div>
-          <div>
-            <div class="alg-name">보통 · 65~84%</div>
-            <div class="alg-desc">시장 리포트·업계 동향 기반, 일부 AI 종합 추론 포함</div>
-          </div>
+          <div><div class="alg-name">보통 · 65~84%</div><div class="alg-desc">시장 리포트·업계 동향 기반, 일부 AI 종합 추론 포함</div></div>
         </div>
         <div class="alg-item">
           <div class="alg-dot" style="background:var(--amber)"></div>
-          <div>
-            <div class="alg-name">AI 추론 · 50~64%</div>
-            <div class="alg-desc">데이터 기반 AI 전망 분석. 의사결정 전 반드시 추가 검증 필요</div>
-          </div>
+          <div><div class="alg-name">AI 추론 · 50~64%</div><div class="alg-desc">데이터 기반 AI 전망. 의사결정 전 추가 검증 필요</div></div>
         </div>
       </div>
     </div>
-
   </div><!-- /result -->
 
   <div id="empty">
     <div class="e-icon">✦</div>
-    <div class="e-title">분석을 시작하세요</div>
-    <div class="e-sub">위 모듈 버튼을 클릭하면 AI가 시장 동향을 분석합니다</div>
+    <div class="e-title">분석을 준비 중입니다</div>
+    <div class="e-sub">잠시 후 위 버튼을 클릭해 결과를 확인하세요</div>
   </div>
 
   <div id="history-section">
@@ -485,98 +426,102 @@ body{font-family:'Pretendard','Apple SD Gothic Neo',sans-serif;color:var(--ink);
     <div id="history-list"></div>
   </div>
 
-</div>
+</div><!-- /app -->
 
 <script>
-/* ═══════════════════════════════════════════════════════════════════
+/* ════════════════════════════════════════════════════
+   ⚠ API KEY — GitHub에 올리기 전 아래 값을 교체하세요
+   ════════════════════════════════════════════════════ */
+const CLAUDE_API_KEY = "YOUR_ANTHROPIC_API_KEY";
+
+/* ════════════════════════════════════════════════════
    SYSTEM PROMPT
-   — PDF 회사 정보는 AI가 올바른 제품명·수치를 쓰도록 하는
-     내부 컨텍스트 전용. 레포트 결과에 PDF 문구를 그대로 출력 금지.
-   ═══════════════════════════════════════════════════════════════════ */
+   ════════════════════════════════════════════════════ */
 const SYSTEM_PROMPT = `당신은 한화첨단소재의 시장 인텔리전스 수석 분석가입니다.
 
-【내부 참조용 제품 정보 — 출력 시 원문 그대로 인용 금지, 분석 판단의 배경으로만 활용】
+【내부 참조 전용 — 레포트에 이 내용을 그대로 인용하지 말 것】
 한화첨단소재 핵심 제품군:
 - StrongLite (GMT): 유리섬유 매트 강화 열가소성 시트. 세계 시장점유율 1위. 범퍼빔·언더커버·시트백패널·배터리 트레이 등 적용.
-- SuperLite (LWRT): 경량 다공성 구조 열가소성 시트. 세계 시장점유율 1위. 언더바디 패널·헤드라이너·도어트림 등 적용.
-- BuffLite (EPP): 발포 폴리프로필렌. 범퍼 에너지 흡수재·층간 차음재·부표·전자파 차폐 응용.
+- SuperLite (LWRT): 경량 다공성 열가소성 시트. 세계 시장점유율 1위. 언더바디 패널·헤드라이너·도어트림 등 적용.
+- BuffLite (EPP): 발포 폴리프로필렌. 범퍼 에너지 흡수재·층간 차음재·부표·전자파 차폐 등 응용.
 - IntermLite (PMC/시트): 자동차 내장재 표피재. TPO/PVC 시트 및 TPU 파우더 슬러시 성형.
 - SMC (Sheet Molding Compound): 열경화성 유리섬유 강화 시트. 외장 패널·배터리 팩 케이스·픽업트럭 베드 등.
 - Encapsulant / Backsheet: 태양광 모듈 봉지재 및 후면 보호재.
 경쟁사: 도레이(Toray), Hexcel, SGL Carbon
 
-【중요 작성 원칙】
-1. 레포트 내용은 반드시 Gemini 웹 검색(Google Search Grounding)으로 수집한 최신 시장 뉴스와 동향에 기반할 것.
-2. 위 제품 정보는 "어느 제품이 이 동향과 관련되는가"를 판단하는 내부 기준으로만 쓸 것. PDF 문구를 그대로 레포트에 복사·인용하지 말 것.
-3. 각 섹션의 내용은 실제 최근 외부 시장 동향(뉴스·정책·OEM 발표 등)에서 출발하여 한화첨단소재의 관련 제품에 미치는 시사점을 분석할 것.
-4. "analysis_period"에 이 분석이 커버하는 실제 기간을 명시할 것 (예: "2025년 3월 기준 최신 동향").
-5. "accuracy_summary"에 전체 신뢰도 점수(0~100)와 AI 추론 포함 여부를 명시할 것.
-6. "data_sources" 배열에 실제 참조한 출처 유형을 나열할 것.
-7. 각 section에 "accuracy_level"(HIGH/MEDIUM/LOW), "source_type"(market/regulatory/ai/official) 포함.
-8. sections는 6개 이상 작성.
+【작성 원칙】
+1. 레포트 내용은 반드시 실제 최신 시장 뉴스와 동향에 기반할 것.
+2. 위 제품 정보는 "어느 제품이 이 동향과 관련되는가"를 판단하는 내부 기준으로만 활용.
+3. 각 섹션은 실제 외부 시장 동향에서 출발하여 한화첨단소재 관련 제품의 시사점을 분석.
+4. "analysis_period"에 실제 분석 기간을 명시.
+5. "accuracy_summary.overall_score"에 0~100 신뢰도 점수 명시.
+6. "accuracy_summary.has_ai_inference"에 AI 추론 포함 여부 명시.
+7. "data_sources" 배열에 참조 출처 유형 나열.
+8. 각 section에 "accuracy_level"(HIGH/MEDIUM/LOW), "source_type"(market/regulatory/ai/official) 포함.
+9. sections는 6개 이상 작성.
 
-응답 형식 (JSON만 출력, 마크다운 코드블록 없이):
+JSON만 출력 (마크다운 코드블록 없이):
 {
-  "summary": "실제 최신 시장 동향 기반 요약...",
+  "summary": "...",
   "impact_score": "HIGH",
-  "analysis_period": "2025년 3월 기준 최신 동향",
+  "analysis_period": "2025년 3월 기준",
   "accuracy_summary": {
     "overall_score": 80,
     "has_ai_inference": true,
-    "note": "웹검색 기반, 수요 전망 일부 AI 추론"
+    "note": "..."
   },
   "data_sources": [
-    {"name": "Gemini 웹검색 — 최신 뉴스/업계 보도", "type": "market"},
-    {"name": "IRA·EU 탄소규제·중국 NEV 정책", "type": "regulatory"},
+    {"name": "최신 업계 뉴스/보도", "type": "market"},
+    {"name": "IRA·EU·중국 정책", "type": "regulatory"},
     {"name": "AI 시장 전망 추론", "type": "ai"}
   ],
   "sections": [
     {
-      "title": "섹션 제목",
-      "content": "실제 시장 동향과 한화첨단소재 시사점...",
+      "title": "...",
+      "content": "...",
       "tag": "EV동향",
       "accuracy_level": "HIGH",
       "source_type": "market"
     }
   ],
-  "products_affected": ["StrongLite (GMT)", "SuperLite (LWRT)", "SMC"],
+  "products_affected": ["StrongLite (GMT)", "SuperLite (LWRT)"],
   "actions": {
-    "sales": "영업팀 액션...",
-    "rd": "R&D팀 액션...",
-    "management": "경영진 액션..."
+    "sales": "...",
+    "rd": "...",
+    "management": "..."
   },
   "timeline": {
-    "short": "단기 6개월...",
-    "mid": "중기 2년...",
-    "long": "장기 5년..."
+    "short": "...",
+    "mid": "...",
+    "long": "..."
   }
 }`;
 
-/* ═══════════════════════════════════════════════════════════════════
-   TOPICS
-   ═══════════════════════════════════════════════════════════════════ */
+/* ════════════════════════════════════════════════════
+   TOPIC PROMPTS
+   ════════════════════════════════════════════════════ */
 const TOPICS = {
   weekly: {
     label: "주간 종합",
-    prompt: "최근 1개월 글로벌 자동차 및 전기차 산업 주요 동향을 웹 검색으로 조사하고, 한화첨단소재 소재 수요 영향을 분석하세요. EV 판매, OEM 신차, 배터리 기술, 경량화 트렌드, 관련 정책 포함. 반드시 실제 최신 뉴스와 발표를 기반으로 작성하세요."
+    prompt: "최근 1개월 글로벌 자동차 및 전기차 산업 주요 동향을 분석하고, 한화첨단소재 소재 수요 영향을 분석하세요. EV 판매, OEM 신차, 배터리 기술, 경량화 트렌드, 관련 정책 포함. 실제 최신 뉴스와 발표 기반으로 작성하세요."
   },
   ev: {
     label: "EV / 정책",
-    prompt: "글로벌 전기차 시장 최신 동향과 각국 EV 정책 변화(미국 IRA, EU 탄소규제, 중국 NEV)를 웹 검색으로 조사하고, 한화첨단소재 제품 수요에 미치는 영향을 분석하세요. 반드시 실제 정책 동향과 뉴스를 기반으로 작성하세요."
+    prompt: "글로벌 전기차 시장 최신 동향과 각국 EV 정책 변화(미국 IRA, EU 탄소규제, 중국 NEV)를 분석하고, 한화첨단소재 제품 수요 영향을 분석하세요. 실제 최신 정책 동향과 뉴스 기반으로 작성하세요."
   },
   oem: {
     label: "OEM 동향",
-    prompt: "현대/기아, BMW, GM, Toyota, Tesla, BYD 등 주요 OEM의 최근 신차 출시·플랫폼 전환·소재 채용 발표를 웹 검색으로 조사하고, 한화첨단소재 사업 기회를 분석하세요. 반드시 실제 OEM 발표와 뉴스를 기반으로 작성하세요."
+    prompt: "현대/기아, BMW, GM, Toyota, Tesla, BYD 등 주요 OEM의 최근 신차 출시·플랫폼 전환·소재 채용 발표를 분석하고, 한화첨단소재 사업 기회를 분석하세요. 실제 OEM 발표와 뉴스 기반으로 작성하세요."
   },
   materials: {
     label: "소재 기술",
-    prompt: "자동차·항공 경량복합소재 기술 트렌드, CFRP/GFRP 시장 변화, 도레이·Hexcel·SGL Carbon 경쟁사 동향을 웹 검색으로 조사하고, 한화첨단소재 기술 포지셔닝과 R&D 방향을 분석하세요. 반드시 실제 최신 기술 동향과 뉴스를 기반으로 작성하세요."
+    prompt: "자동차·항공 경량복합소재 기술 트렌드, CFRP/GFRP 시장 변화, 도레이·Hexcel·SGL Carbon 경쟁사 동향을 분석하고, 한화첨단소재 기술 포지셔닝과 R&D 방향을 분석하세요. 실제 최신 기술 동향과 뉴스 기반으로 작성하세요."
   }
 };
 
-/* ═══════════════════════════════════════════════════════════════════
+/* ════════════════════════════════════════════════════
    STYLE MAPS
-   ═══════════════════════════════════════════════════════════════════ */
+   ════════════════════════════════════════════════════ */
 const TAG_STYLES = {
   "EV동향":   {bg:"#eff5ff",color:"#1e5fa8"},
   "OEM동향":  {bg:"#f5f3ff",color:"#5b21b6"},
@@ -588,172 +533,259 @@ const TAG_STYLES = {
   "친환경":   {bg:"#f0fdf4",color:"#065f46"},
   "리스크":   {bg:"#fff1f2",color:"#be123c"}
 };
-const IMPACT_MAP = {
-  HIGH:   {color:"#dc2626", bar:100},
-  MEDIUM: {color:"#d97706", bar:60},
-  LOW:    {color:"#6b7280", bar:30}
-};
-const ACC_MAP = {
-  HIGH:   {color:"#177a4a", label:"높음"},
-  MEDIUM: {color:"#d97706", label:"보통"},
-  LOW:    {color:"#a05c00", label:"AI추론"}
-};
-const SRC_MAP = {
-  market:     {cls:"market",     label:"시장데이터"},
-  regulatory: {cls:"regulatory", label:"정책·규제"},
-  ai:         {cls:"ai",         label:"AI추론"},
-  official:   {cls:"official",   label:"공식발표"},
-  company:    {cls:"company",    label:"회사자료"}
-};
+const IMPACT_MAP = {HIGH:{color:"#dc2626",bar:100},MEDIUM:{color:"#d97706",bar:60},LOW:{color:"#6b7280",bar:30}};
+const ACC_MAP    = {HIGH:{color:"#177a4a",label:"높음"},MEDIUM:{color:"#d97706",label:"보통"},LOW:{color:"#a05c00",label:"AI추론"}};
+const SRC_MAP    = {market:{cls:"market",label:"시장데이터"},regulatory:{cls:"regulatory",label:"정책·규제"},ai:{cls:"ai",label:"AI추론"},official:{cls:"official",label:"공식발표"},company:{cls:"company",label:"회사자료"}};
 
-let history = [];
+/* ════════════════════════════════════════════════════
+   STATE
+   ════════════════════════════════════════════════════ */
+const cache    = {};   // topicId → parsed data
+const statuses = {};   // topicId → 'loading'|'done'|'error'
+let customHistory = [];
+let currentTopicId = null;
 
-/* ═══════════════════════════════════════════════════════════════════
+/* ════════════════════════════════════════════════════
    INIT
-   ═══════════════════════════════════════════════════════════════════ */
+   ════════════════════════════════════════════════════ */
 document.getElementById("today-date").textContent =
   new Date().toLocaleDateString("ko-KR",{year:"numeric",month:"long",day:"numeric"});
-const saved = localStorage.getItem("hamc_key_v3");
-if (saved) { document.getElementById("api-key-input").value = saved; setApiStatus(true); }
 
-/* ═══════════════════════════════════════════════════════════════════
-   API KEY
-   ═══════════════════════════════════════════════════════════════════ */
-function saveApiKey() {
-  const v = document.getElementById("api-key-input").value.trim();
-  if (!v.startsWith("AIza")) { setApiStatus(false,"올바른 Google AI Studio 키 형식이 아닙니다 (AIza 로 시작)"); return; }
-  localStorage.setItem("hamc_key_v3", v); setApiStatus(true);
-}
-function setApiStatus(ok, msg) {
-  const el = document.getElementById("api-status");
-  el.style.color = ok ? "#16a34a" : "#dc2626";
-  el.textContent = ok ? "✓ API 키가 저장되었습니다" : "✗ " + (msg || "오류");
+// 페이지 로드 시 4개 분석 병렬 실행
+window.addEventListener("DOMContentLoaded", () => {
+  document.getElementById("empty").style.display = "block";
+  preloadAll();
+});
+
+/* ════════════════════════════════════════════════════
+   PRELOAD ALL TOPICS
+   ════════════════════════════════════════════════════ */
+async function preloadAll() {
+  const ids = ["weekly","ev","oem","materials"];
+  // 병렬 실행
+  ids.forEach(id => preloadTopic(id));
 }
 
-/* ═══════════════════════════════════════════════════════════════════
-   CUSTOM / TOPIC
-   ═══════════════════════════════════════════════════════════════════ */
+async function preloadTopic(id) {
+  const chip = document.getElementById("chip-" + id);
+  const btn  = document.getElementById("btn-" + id);
+
+  // loading 상태
+  statuses[id] = "loading";
+  chip.className = "pb-chip loading";
+  chip.querySelector(".pb-dot").className = "pb-dot spin";
+  btn.classList.add("loading-state");
+
+  try {
+    const data = await callClaude(TOPICS[id].prompt);
+    cache[id] = data;
+    statuses[id] = "done";
+
+    chip.className = "pb-chip done";
+    chip.querySelector(".pb-dot").className = "pb-dot";
+    btn.classList.remove("loading-state");
+    btn.classList.add("done");
+
+    // 첫 번째 완료된 항목을 자동으로 표시
+    if (!currentTopicId) {
+      showTopic(id);
+    }
+  } catch(e) {
+    statuses[id] = "error";
+    chip.className = "pb-chip error";
+    chip.querySelector(".pb-dot").className = "pb-dot";
+    btn.classList.remove("loading-state");
+    console.error("Preload error [" + id + "]:", e);
+  }
+}
+
+/* ════════════════════════════════════════════════════
+   SHOW CACHED TOPIC (탭 클릭 시)
+   ════════════════════════════════════════════════════ */
+function showTopic(id) {
+  const status = statuses[id];
+
+  // 버튼 active 처리
+  document.querySelectorAll(".topic-btn").forEach(b => b.classList.remove("active"));
+  document.getElementById("btn-" + id).classList.add("active");
+  currentTopicId = id;
+
+  if (status === "loading") {
+    // 아직 로딩 중이면 안내 메시지
+    document.getElementById("result").classList.remove("show");
+    document.getElementById("empty").style.display = "block";
+    document.querySelector("#empty .e-title").textContent = "분석 중입니다...";
+    document.querySelector("#empty .e-sub").textContent = "잠시 후 자동으로 표시됩니다";
+    // 완료 시 자동 표시를 위해 polling
+    waitAndShow(id);
+    return;
+  }
+  if (status === "error") {
+    showError("'" + TOPICS[id].label + "' 분석 중 오류가 발생했습니다. 페이지를 새로고침해 주세요.");
+    return;
+  }
+  if (status === "done" && cache[id]) {
+    const dateStr = new Date().toLocaleDateString("ko-KR",{year:"numeric",month:"long",day:"numeric"});
+    const timeStr = new Date().toLocaleTimeString("ko-KR",{hour:"2-digit",minute:"2-digit"});
+    renderResult({
+      topic: TOPICS[id].label,
+      topicId: id,
+      dateStr, timeStr,
+      data: cache[id]
+    });
+    document.getElementById("empty").style.display = "none";
+    document.getElementById("result").classList.add("show");
+    window.scrollTo({top: document.getElementById("result").offsetTop - 80, behavior:"smooth"});
+  }
+}
+
+function waitAndShow(id) {
+  const interval = setInterval(() => {
+    if (statuses[id] === "done") {
+      clearInterval(interval);
+      if (currentTopicId === id) showTopic(id);
+    } else if (statuses[id] === "error") {
+      clearInterval(interval);
+    }
+  }, 500);
+}
+
+/* ════════════════════════════════════════════════════
+   CUSTOM QUERY
+   ════════════════════════════════════════════════════ */
 function toggleCustom() {
   const a = document.getElementById("custom-area"), b = document.getElementById("custom-toggle");
   const open = a.classList.toggle("open");
   b.style.display = open ? "none" : "block";
   if (open) document.getElementById("custom-input").focus();
 }
-function runCustom() {
-  const q = document.getElementById("custom-input").value.trim(); if (!q) return;
-  const label = q.slice(0,22) + (q.length > 22 ? "…" : "");
+
+async function runCustom() {
+  const q = document.getElementById("custom-input").value.trim();
+  if (!q) return;
+
+  const label = q.slice(0,28) + (q.length > 28 ? "…" : "");
   document.getElementById("custom-area").classList.remove("open");
   document.getElementById("custom-toggle").style.display = "block";
   document.getElementById("custom-input").value = "";
-  runAnalysis(q + "\n한화첨단소재 관점에서 분석하세요. 실제 최신 시장 뉴스를 웹 검색하여 기반으로 작성하세요.", "custom", label);
-}
-function runTopic(id) {
-  const t = TOPICS[id]; if (!t) return;
-  document.querySelectorAll(".topic-btn").forEach(b => b.classList.remove("active"));
-  document.getElementById("btn-" + id).classList.add("active");
-  runAnalysis(t.prompt, id, t.label);
-}
 
-/* ═══════════════════════════════════════════════════════════════════
-   MAIN ANALYSIS
-   ═══════════════════════════════════════════════════════════════════ */
-async function runAnalysis(prompt, topicId, topicLabel) {
-  const key = localStorage.getItem("hamc_key_v3");
-  if (!key) { showError("API 키를 먼저 입력하고 저장해주세요."); return; }
-  setView("loading");
+  // 버튼 비활성화
+  document.getElementById("btn-custom-run").disabled = true;
+
+  // active 표시 해제
+  document.querySelectorAll(".topic-btn").forEach(b => b.classList.remove("active"));
+  currentTopicId = null;
+
+  // 로딩 표시
+  document.getElementById("result").classList.remove("show");
+  document.getElementById("empty").style.display = "none";
+  document.getElementById("error-box").classList.remove("show");
+  document.getElementById("custom-loading").classList.add("show");
+
   try {
+    const fullPrompt = q + "\n\n한화첨단소재 관점에서 분석하세요. 실제 최신 시장 뉴스를 기반으로 작성하세요.";
+    const data = await callClaude(fullPrompt);
+
     const dateStr = new Date().toLocaleDateString("ko-KR",{year:"numeric",month:"long",day:"numeric"});
     const timeStr = new Date().toLocaleTimeString("ko-KR",{hour:"2-digit",minute:"2-digit"});
-    const fullPrompt = `오늘 날짜: ${dateStr}\n\n${prompt}`;
+    const entry = {topic: label, topicId:"custom", dateStr, timeStr, data};
 
-    const res = await fetch(
-      `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash-lite:generateContent?key=${key}`,
-      {
-        method: "POST",
-        headers: {"Content-Type":"application/json"},
-        body: JSON.stringify({
-          system_instruction: {parts:[{text: SYSTEM_PROMPT}]},
-          contents: [{role:"user", parts:[{text: fullPrompt}]}],
-          tools: [{google_search:{}}],
-          generationConfig: {temperature:0.45, maxOutputTokens:5000}
-        })
-      }
-    );
-    if (!res.ok) {
-      const err = await res.json().catch(()=>({}));
-      throw new Error(err.error?.message || `HTTP ${res.status}`);
-    }
-    const data = await res.json();
-    const parts = data.candidates?.[0]?.content?.parts || [];
-    const raw = parts.map(p => p.text || "").join("");
-    const jsonMatch = raw.match(/\{[\s\S]*\}/);
-    if (!jsonMatch) throw new Error("JSON 파싱 실패: " + raw.slice(0,200));
-    const parsed = JSON.parse(jsonMatch[0]);
+    customHistory.unshift(entry);
+    if (customHistory.length > 5) customHistory.pop();
 
-    const entry = {
-      id: Date.now(), topic: topicLabel, topicId,
-      timestamp: timeStr, dateStr, data: parsed
-    };
-    history.unshift(entry);
-    if (history.length > 5) history.pop();
+    document.getElementById("custom-loading").classList.remove("show");
     renderResult(entry);
-    renderHistory();
-    setView("result");
+    renderCustomHistory();
+    document.getElementById("result").classList.add("show");
+    window.scrollTo({top: document.getElementById("result").offsetTop - 80, behavior:"smooth"});
   } catch(e) {
-    console.error(e);
-    if (e.message.includes("API_KEY_INVALID"))      showError("API 키가 올바르지 않습니다.");
-    else if (e.message.includes("RESOURCE_EXHAUSTED")) showError("무료 사용 한도 초과. 잠시 후 다시 시도해주세요.");
-    else showError("분석 중 오류: " + e.message);
-    setView("error");
+    document.getElementById("custom-loading").classList.remove("show");
+    showError("분석 중 오류: " + e.message);
+  } finally {
+    document.getElementById("btn-custom-run").disabled = false;
   }
 }
 
-/* ═══════════════════════════════════════════════════════════════════
+/* ════════════════════════════════════════════════════
+   CLAUDE API CALL
+   ════════════════════════════════════════════════════ */
+async function callClaude(prompt) {
+  const dateStr = new Date().toLocaleDateString("ko-KR",{year:"numeric",month:"long",day:"numeric"});
+
+  const res = await fetch("https://api.anthropic.com/v1/messages", {
+    method: "POST",
+    headers: {
+      "Content-Type": "application/json",
+      "x-api-key": CLAUDE_API_KEY,
+      "anthropic-version": "2023-06-01",
+      "anthropic-dangerous-direct-browser-access": "true"
+    },
+    body: JSON.stringify({
+      model: "claude-sonnet-4-5",
+      max_tokens: 4000,
+      system: SYSTEM_PROMPT,
+      messages: [{
+        role: "user",
+        content: `오늘 날짜: ${dateStr}\n\n${prompt}`
+      }]
+    })
+  });
+
+  if (!res.ok) {
+    const err = await res.json().catch(()=>({}));
+    const msg = err.error?.message || `HTTP ${res.status}`;
+    if (res.status === 401) throw new Error("API 키가 올바르지 않습니다.");
+    if (res.status === 429) throw new Error("API 사용 한도 초과. 잠시 후 다시 시도해주세요.");
+    throw new Error(msg);
+  }
+
+  const data = await res.json();
+  const raw  = data.content?.[0]?.text || "";
+  const jsonMatch = raw.match(/\{[\s\S]*\}/);
+  if (!jsonMatch) throw new Error("응답 파싱 실패");
+  return JSON.parse(jsonMatch[0]);
+}
+
+/* ════════════════════════════════════════════════════
    RENDER RESULT
-   ═══════════════════════════════════════════════════════════════════ */
+   ════════════════════════════════════════════════════ */
 function renderResult(entry) {
   const d = entry.data;
 
-  /* 제목·시간 */
   document.getElementById("r-title").textContent = entry.topic;
-  document.getElementById("r-time").textContent = entry.dateStr + " " + entry.timestamp + " 기준 분석";
+  document.getElementById("r-time").textContent  = entry.dateStr + " " + entry.timeStr + " 기준 분석";
 
-  /* Impact */
   const imp = IMPACT_MAP[d.impact_score] || IMPACT_MAP.MEDIUM;
-  const iv = document.getElementById("r-impact");
+  const iv  = document.getElementById("r-impact");
   iv.textContent = d.impact_score || "–"; iv.style.color = imp.color;
   const bar = document.getElementById("r-impact-bar");
   bar.style.background = imp.color;
   setTimeout(() => { bar.style.width = imp.bar + "%"; }, 100);
 
-  /* 메타 바 */
-  const acc = d.accuracy_summary || {};
+  // 메타
+  const acc   = d.accuracy_summary || {};
   const score = acc.overall_score || 70;
   document.getElementById("mc-period").textContent = d.analysis_period || "최근 동향 분석";
-  document.getElementById("acc-pct").textContent = score + "%";
+  document.getElementById("acc-pct").textContent   = score + "%";
   const fill = document.getElementById("acc-fill");
   fill.style.background = score >= 80 ? "#177a4a" : score >= 65 ? "#d97706" : "#a05c00";
   setTimeout(() => { fill.style.width = score + "%"; }, 300);
   document.getElementById("mc-ai-warn").style.display = acc.has_ai_inference !== false ? "flex" : "none";
 
-  /* 출처 칩 */
+  // 출처
   const sources = d.data_sources || [];
   const chipsEl = document.getElementById("source-chips");
   const rowEl   = document.getElementById("source-row");
   if (sources.length) {
     chipsEl.innerHTML = sources.map(s => {
       const st = SRC_MAP[s.type] || SRC_MAP.market;
-      return `<span class="src-chip ${st.cls}" style="margin-right:4px">${st.label}: ${s.name}</span>`;
+      return `<span class="src-chip ${st.cls}" style="margin-right:4px;margin-bottom:3px">${st.label}: ${s.name}</span>`;
     }).join("");
     rowEl.style.display = "flex";
-  } else {
-    rowEl.style.display = "none";
-  }
+  } else { rowEl.style.display = "none"; }
 
-  /* Summary */
   document.getElementById("r-summary").textContent = d.summary || "";
 
-  /* Products */
   const pr = document.getElementById("products-row");
   if (d.products_affected?.length) {
     pr.innerHTML = `<span class="p-label">영향 제품군</span>` +
@@ -761,7 +793,6 @@ function renderResult(entry) {
     pr.style.display = "flex";
   } else { pr.style.display = "none"; }
 
-  /* Sections */
   document.getElementById("sections-grid").innerHTML = (d.sections || []).map((s, i) => {
     const ts  = TAG_STYLES[s.tag] || {bg:"#f3f4f6", color:"#374151"};
     const aLv = ACC_MAP[s.accuracy_level] || ACC_MAP.MEDIUM;
@@ -780,61 +811,44 @@ function renderResult(entry) {
     </div>`;
   }).join("");
 
-  /* Timeline */
-  document.getElementById("r-short").textContent = d.timeline?.short || "";
-  document.getElementById("r-mid").textContent   = d.timeline?.mid   || "";
-  document.getElementById("r-long").textContent  = d.timeline?.long  || "";
-
-  /* Actions */
-  document.getElementById("r-sales").textContent      = d.actions?.sales      || "";
-  document.getElementById("r-rd").textContent         = d.actions?.rd         || "";
+  document.getElementById("r-short").textContent      = d.timeline?.short || "";
+  document.getElementById("r-mid").textContent        = d.timeline?.mid   || "";
+  document.getElementById("r-long").textContent       = d.timeline?.long  || "";
+  document.getElementById("r-sales").textContent      = d.actions?.sales  || "";
+  document.getElementById("r-rd").textContent         = d.actions?.rd     || "";
   document.getElementById("r-management").textContent = d.actions?.management || "";
 }
 
-/* ═══════════════════════════════════════════════════════════════════
-   HISTORY
-   ═══════════════════════════════════════════════════════════════════ */
-function renderHistory() {
-  if (history.length <= 1) return;
+/* ════════════════════════════════════════════════════
+   HISTORY (custom 전용)
+   ════════════════════════════════════════════════════ */
+function renderCustomHistory() {
+  if (customHistory.length <= 1) return;
   document.getElementById("history-section").classList.add("show");
-  document.getElementById("history-list").innerHTML = history.slice(1).map(h => {
-    const imp  = IMPACT_MAP[h.data.impact_score] || IMPACT_MAP.LOW;
+  document.getElementById("history-list").innerHTML = customHistory.slice(1).map(h => {
+    const imp   = IMPACT_MAP[h.data.impact_score] || IMPACT_MAP.LOW;
     const score = h.data.accuracy_summary?.overall_score || "–";
-    return `<button class="history-item" onclick="restoreHistory(${h.id})">
+    return `<button class="history-item" onclick="restoreCustomHistory(${h.data._id||0})" data-id="${h.timeStr}">
       <span>${h.topic}</span>
       <span style="display:flex;gap:12px;align-items:center">
         <span style="font-size:11px;font-family:'JetBrains Mono',monospace;color:#177a4a">정확도 ${score}%</span>
         <span style="font-size:11px;font-weight:600;color:${imp.color}">${h.data.impact_score}</span>
-        <span style="color:var(--ink5)">${h.timestamp}</span>
+        <span style="color:var(--ink5)">${h.timeStr}</span>
       </span>
     </button>`;
   }).join("");
 }
-function restoreHistory(id) {
-  const e = history.find(h => h.id === id); if (!e) return;
-  renderResult(e); setView("result"); window.scrollTo({top:0, behavior:"smooth"});
-}
 
-/* ═══════════════════════════════════════════════════════════════════
-   VIEW CONTROL
-   ═══════════════════════════════════════════════════════════════════ */
-function setView(s) {
-  document.getElementById("loading").classList.toggle("show", s === "loading");
-  document.getElementById("result").classList.toggle("show",  s === "result");
-  document.getElementById("empty").style.display = (s === "empty") ? "block" : "none";
-  document.getElementById("error-box").classList.toggle("show", s === "error");
-}
+/* ════════════════════════════════════════════════════
+   UTILS
+   ════════════════════════════════════════════════════ */
 function showError(msg) {
   document.getElementById("error-box").innerHTML = "⚠ " + msg;
-  setView("error");
+  document.getElementById("error-box").classList.add("show");
 }
 
-/* ── EVENTS ── */
 document.getElementById("custom-input").addEventListener("keydown", e => {
   if (e.key === "Enter" && !e.shiftKey) { e.preventDefault(); runCustom(); }
-});
-document.getElementById("api-key-input").addEventListener("keydown", e => {
-  if (e.key === "Enter") saveApiKey();
 });
 </script>
 </body>
