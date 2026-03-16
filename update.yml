@@ -1,0 +1,89 @@
+name: Weekly Intelligence Update
+
+on:
+  schedule:
+    - cron: '0 1 * * 1'   # 매주 월요일 오전 10시 (KST = UTC+1 → UTC 01:00)
+  workflow_dispatch:        # 수동 실행 버튼
+
+jobs:
+  update:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Generate analysis JSON files
+        env:
+          ANTHROPIC_API_KEY: ${{ secrets.ANTHROPIC_API_KEY }}
+        run: |
+          mkdir -p data
+          TODAY=$(date '+%Y년 %m월 %d일')
+
+          SYSTEM_PROMPT='당신은 한화첨단소재의 시장 인텔리전스 수석 분석가입니다.
+          한화첨단소재 핵심 제품군(내부 참조용, 레포트에 직접 인용 금지):
+          - StrongLite(GMT): 유리섬유 매트 강화 열가소성 시트, 세계 1위, 범퍼빔·배터리 트레이 등
+          - SuperLite(LWRT): 경량 다공성 열가소성 시트, 세계 1위, 언더바디·헤드라이너 등
+          - BuffLite(EPP): 발포 폴리프로필렌, 범퍼 흡수재·차음재·전자파 차폐 등
+          - IntermLite(PMC/시트): 내장재 표피재
+          - SMC: 열경화성 복합소재, 외장 패널·배터리 팩 케이스
+          - Encapsulant/Backsheet: 태양광 모듈 소재
+          경쟁사: 도레이, Hexcel, SGL Carbon
+          작성 원칙: 실제 최신 시장 뉴스 기반, JSON만 출력(마크다운 없이)
+          형식: {"summary":"...","impact_score":"HIGH","analysis_period":"...","generated_at":"날짜","accuracy_summary":{"overall_score":80,"has_ai_inference":true,"note":"..."},"data_sources":[{"name":"...","type":"market"}],"sections":[{"title":"...","content":"...","tag":"EV동향","accuracy_level":"HIGH","source_type":"market"}],"products_affected":["StrongLite (GMT)"],"actions":{"sales":"...","rd":"...","management":"..."},"timeline":{"short":"...","mid":"...","long":"..."}}'
+
+          call_claude() {
+            local PROMPT="$1"
+            local OUTPUT_FILE="$2"
+            local RESPONSE=$(curl -s https://api.anthropic.com/v1/messages \
+              -H "x-api-key: $ANTHROPIC_API_KEY" \
+              -H "anthropic-version: 2023-06-01" \
+              -H "content-type: application/json" \
+              -d "{
+                \"model\": \"claude-sonnet-4-5\",
+                \"max_tokens\": 4000,
+                \"system\": $(echo "$SYSTEM_PROMPT" | python3 -c 'import json,sys; print(json.dumps(sys.stdin.read()))'),
+                \"messages\": [{
+                  \"role\": \"user\",
+                  \"content\": $(echo "오늘 날짜: $TODAY\n\n$PROMPT" | python3 -c 'import json,sys; print(json.dumps(sys.stdin.read()))')
+                }]
+              }")
+
+            # JSON 추출 및 generated_at 추가
+            echo "$RESPONSE" | python3 -c "
+          import json, sys, re
+          data = json.load(sys.stdin)
+          text = data['content'][0]['text']
+          match = re.search(r'\{[\s\S]*\}', text)
+          if match:
+              result = json.loads(match.group())
+              result['generated_at'] = '$TODAY'
+              print(json.dumps(result, ensure_ascii=False, indent=2))
+          else:
+              print('{}')
+          " > "$OUTPUT_FILE"
+
+            echo "✓ $OUTPUT_FILE 생성 완료"
+          }
+
+          # 4개 분석 순차 실행
+          call_claude "최근 1개월 글로벌 자동차 및 전기차 산업 주요 동향을 분석하고 한화첨단소재 소재 수요 영향을 분석하세요. EV 판매, OEM 신차, 배터리 기술, 경량화 트렌드, 관련 정책 포함. sections 6개 이상 작성." "data/weekly.json"
+
+          sleep 5
+
+          call_claude "글로벌 전기차 시장 최신 동향과 각국 EV 정책 변화(미국 IRA, EU 탄소규제, 중국 NEV)를 분석하고 한화첨단소재 제품 수요 영향을 분석하세요. sections 6개 이상 작성." "data/ev.json"
+
+          sleep 5
+
+          call_claude "현대/기아, BMW, GM, Toyota, Tesla, BYD 등 주요 OEM의 최근 신차 출시·플랫폼 전환·소재 채용 발표를 분석하고 한화첨단소재 사업 기회를 분석하세요. sections 6개 이상 작성." "data/oem.json"
+
+          sleep 5
+
+          call_claude "자동차·항공 경량복합소재 기술 트렌드, CFRP/GFRP 시장 변화, 도레이·Hexcel·SGL Carbon 경쟁사 동향을 분석하고 한화첨단소재 기술 포지셔닝과 R&D 방향을 분석하세요. sections 6개 이상 작성." "data/materials.json"
+
+      - name: Commit and push JSON files
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+          git add data/
+          git diff --cached --quiet || git commit -m "chore: weekly intelligence update $(date '+%Y-%m-%d')"
+          git push
