@@ -14,16 +14,17 @@ TIMESTAMP = now.strftime("%Y년 %m월 %d일 %H시 %M분")
 
 SYSTEM = (
     "You are a market intelligence analyst for Hanwha Advanced Materials.\n"
-    "IMPORTANT: Respond ONLY with a single valid JSON object. No markdown, no code blocks, no explanation.\n"
-    "The JSON must be on a single line or properly escaped. Do not include newlines inside string values.\n\n"
-    "Product reference (internal only, do not quote directly):\n"
+    "CRITICAL: Your response must be ONLY a raw JSON object. "
+    "Do NOT use markdown code blocks (no ```json, no ```). "
+    "Start your response directly with { and end with }.\n\n"
+    "Product reference (internal only, do not quote directly in report):\n"
     "- StrongLite(GMT): world #1, bumper beams, battery trays\n"
     "- SuperLite(LWRT): world #1, underbody panels, headliners\n"
     "- BuffLite(EPP): bumper absorbers, sound insulation, EMI shielding\n"
     "- IntermLite(PMC): automotive interior skin materials\n"
     "- SMC: exterior panels, battery pack cases\n"
     "Competitors: Toray, Hexcel, SGL Carbon\n\n"
-    "Output format (single line JSON, all string values must not contain unescaped quotes or newlines):\n"
+    "Required JSON structure:\n"
     '{"summary":"...","impact_score":"HIGH","analysis_period":"...","accuracy_summary":{"overall_score":80,"has_ai_inference":true,"note":"..."},'
     '"data_sources":[{"name":"...","type":"market"}],'
     '"sections":[{"title":"...","content":"...","tag":"EV동향","accuracy_level":"HIGH","source_type":"market"}],'
@@ -33,37 +34,33 @@ SYSTEM = (
 )
 
 TOPICS = {
-    "weekly":    "Analyze major global automotive and EV industry trends from the past month and their impact on Hanwha Advanced Materials material demand. Include EV sales, OEM launches, battery tech, lightweighting trends, and policies. Write at least 6 sections. Respond in Korean.",
+    "weekly":    "Analyze major global automotive and EV industry trends from the past month and their impact on Hanwha Advanced Materials. Include EV sales, OEM launches, battery tech, lightweighting trends, and policies. Write at least 6 sections. Respond in Korean.",
     "ev":        "Analyze the latest global EV market trends and policy changes (US IRA, EU carbon regulations, China NEV) and their impact on Hanwha Advanced Materials product demand. Write at least 6 sections. Respond in Korean.",
-    "oem":       "Analyze recent new model launches, platform transitions, and material adoption announcements from major OEMs (Hyundai/Kia, BMW, GM, Toyota, Tesla, BYD) and business opportunities for Hanwha Advanced Materials. Write at least 6 sections. Respond in Korean.",
-    "materials": "Analyze automotive and aerospace lightweight composite material technology trends, CFRP/GFRP market changes, and competitor moves (Toray, Hexcel, SGL Carbon), and assess Hanwha Advanced Materials technology positioning and R&D direction. Write at least 6 sections. Respond in Korean."
+    "oem":       "Analyze recent new model launches, platform transitions, and material adoption from major OEMs (Hyundai/Kia, BMW, GM, Toyota, Tesla, BYD) and business opportunities for Hanwha Advanced Materials. Write at least 6 sections. Respond in Korean.",
+    "materials": "Analyze automotive and aerospace lightweight composite material trends, CFRP/GFRP market changes, and competitor moves (Toray, Hexcel, SGL Carbon), and assess Hanwha Advanced Materials technology positioning. Write at least 6 sections. Respond in Korean."
 }
 
 def extract_json(text):
-    """JSON 추출 - 여러 방법 시도"""
-    # 방법 1: 코드블록 제거 후 시도
-    cleaned = re.sub(r'```json\s*', '', text)
-    cleaned = re.sub(r'```\s*', '', cleaned)
-    cleaned = cleaned.strip()
+    # 1단계: ```json ... ``` 제거
+    text = re.sub(r'```json\s*', '', text)
+    text = re.sub(r'```\s*', '', text)
+    text = text.strip()
 
-    # 방법 2: { } 사이 추출
-    match = re.search(r'\{[\s\S]*\}', cleaned)
-    if match:
-        candidate = match.group()
+    # 2단계: { 시작 위치부터 마지막 } 까지 추출
+    start = text.find('{')
+    end = text.rfind('}')
+    if start != -1 and end != -1 and end > start:
+        candidate = text[start:end+1]
         try:
             return json.loads(candidate)
-        except json.JSONDecodeError:
-            pass
-
-    # 방법 3: 줄바꿈 제거 후 시도
-    try:
-        oneline = ' '.join(cleaned.split())
-        match2 = re.search(r'\{.*\}', oneline)
-        if match2:
-            return json.loads(match2.group())
-    except Exception:
-        pass
-
+        except json.JSONDecodeError as e:
+            print(f"  JSON 파싱 오류: {e}")
+            # 3단계: 줄바꿈 정리 후 재시도
+            try:
+                fixed = re.sub(r'\n\s*', ' ', candidate)
+                return json.loads(fixed)
+            except Exception:
+                pass
     return None
 
 def call_claude(topic_id, prompt):
@@ -90,6 +87,7 @@ def call_claude(topic_id, prompt):
 
         text = body.get("content", [{}])[0].get("text", "")
         print(f"  응답 길이: {len(text)} chars")
+        print(f"  응답 시작: {text[:50]}")
 
         result = extract_json(text)
         if result:
@@ -97,7 +95,7 @@ def call_claude(topic_id, prompt):
             print(f"  ✓ JSON 파싱 성공")
             return result
         else:
-            print(f"  ⚠ JSON 파싱 실패. 응답 앞부분: {text[:300]}")
+            print(f"  ⚠ JSON 파싱 최종 실패")
             return {
                 "error": "parse_failed",
                 "generated_at": TIMESTAMP,
