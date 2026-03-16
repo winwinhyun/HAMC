@@ -172,7 +172,7 @@ html = f"""<!DOCTYPE html>
               <table width="100%" cellpadding="0" cellspacing="0" border="0">
                 <tr>
                   <td style="font-size:11px;color:#6b6359;font-family:Arial,sans-serif;line-height:1.6">
-                    자동 발송 &middot; 3시간마다 갱신 &middot; Powered by Claude AI
+                    자동 발송 &middot; 매일 오전 7시 갱신 &middot; Powered by Claude AI
                   </td>
                 </tr>
                 <tr>
