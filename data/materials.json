@@ -1,5 +1,5 @@
 {
-  "error": "HTTP Error 401: Unauthorized",
-  "generated_at": "2026년 03월 16일 15시 55분",
+  "error": "Expecting ',' delimiter: line 59 column 6 (char 4022)",
+  "generated_at": "2026년 03월 16일 16시 09분",
   "summary": "API 오류 발생"
 }
