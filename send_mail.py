@@ -191,16 +191,19 @@ html = f"""<!DOCTYPE html>
 </body>
 </html>"""
 
-msg = MIMEMultipart("alternative")
-msg["Subject"] = subject
-msg["From"]    = gmail_user
-msg["To"]      = to_email
-msg.attach(MIMEText(html, "html", "utf-8"))
+# 수신자 여러 명 지원 (쉼표 구분)
+recipients = [e.strip() for e in to_email.split(',') if e.strip()]
 
 try:
     with smtplib.SMTP_SSL("smtp.gmail.com", 465) as server:
         server.login(gmail_user, gmail_password)
-        server.sendmail(gmail_user, to_email, msg.as_string())
-    print("✓ 이메일 발송 완료")
+        for recipient in recipients:
+            msg = MIMEMultipart("alternative")
+            msg["Subject"] = subject
+            msg["From"]    = gmail_user
+            msg["To"]      = recipient
+            msg.attach(MIMEText(html, "html", "utf-8"))
+            server.sendmail(gmail_user, recipient, msg.as_string())
+            print(f"✓ 이메일 발송 완료: {recipient}")
 except Exception as e:
     print(f"이메일 발송 실패: {e}")
