@@ -2,7 +2,7 @@ name: Intelligence Update & Notify
 
 on:
   schedule:
-    - cron: '0 */3 * * *'
+    - cron: '0 22 * * 0-4'   # 매주 월~금 오전 7시 KST (UTC 22:00 전날)
   workflow_dispatch:
 
 jobs:
