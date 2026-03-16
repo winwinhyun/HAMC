@@ -2,8 +2,8 @@ name: Intelligence Update & Notify
 
 on:
   schedule:
-    - cron: '0 */3 * * *'
-  workflow_dispatch:
+    - cron: '0 */3 * * *'   # 3시간마다 실행 (UTC 기준 0,3,6,9,12,15,18,21시)
+  workflow_dispatch:          # 수동 실행 버튼
 
 jobs:
   update-and-notify:
@@ -13,105 +13,79 @@ jobs:
       - name: Checkout
         uses: actions/checkout@v4
 
-      - name: Generate JSON files
+      - name: Generate analysis JSON (Claude API)
         env:
           ANTHROPIC_API_KEY: ${{ secrets.ANTHROPIC_API_KEY }}
         run: |
           mkdir -p data
+          TODAY=$(TZ='Asia/Seoul' date '+%Y년 %m월 %d일 %H시 %M분')
+          DATE_ONLY=$(TZ='Asia/Seoul' date '+%Y년 %m월 %d일')
 
-          # Python 스크립트 파일로 저장 (heredoc 이스케이프 문제 방지)
-          cat > /tmp/generate.py << 'ENDOFSCRIPT'
+          call_claude() {
+            local TOPIC_ID="$1"
+            local PROMPT="$2"
+            local OUT="data/${TOPIC_ID}.json"
+
+            echo "▶ ${TOPIC_ID} 분석 시작..."
+
+            # Python으로 JSON payload 생성 (특수문자 이스케이프 안전하게)
+            python3 - <<PYEOF > /tmp/payload_${TOPIC_ID}.json
           import json
-          import re
-          import urllib.request
-          import urllib.error
-          import os
-          import sys
-          from datetime import datetime
-
-          API_KEY = os.environ.get("ANTHROPIC_API_KEY", "")
-
-          # 한국 시간
-          from datetime import timezone, timedelta
-          KST = timezone(timedelta(hours=9))
-          now = datetime.now(KST)
-          DATE_ONLY  = now.strftime("%Y년 %m월 %d일")
-          TIMESTAMP  = now.strftime("%Y년 %m월 %d일 %H시 %M분")
-
-          SYSTEM = """당신은 한화첨단소재의 시장 인텔리전스 수석 분석가입니다.
+          system = """당신은 한화첨단소재의 시장 인텔리전스 수석 분석가입니다.
           내부 참조 전용(레포트에 직접 인용 금지):
-          - StrongLite(GMT): 세계1위, 범퍼빔·배터리 트레이 등
-          - SuperLite(LWRT): 세계1위, 언더바디·헤드라이너 등
-          - BuffLite(EPP): 범퍼 흡수재·차음재·전자파 차폐 등
-          - IntermLite(PMC): 자동차 내장재 표피재
-          - SMC: 외장 패널·배터리 팩 케이스 등
-          경쟁사: 도레이, Hexcel, SGL Carbon
-
-          작성 원칙:
-          1. 실제 최신 시장 뉴스와 동향에 기반할 것
-          2. sections 6개 이상 작성
-          3. JSON만 출력 (마크다운 코드블록 없이)
-
-          출력 형식 (반드시 이 구조 그대로):
+          StrongLite(GMT) 세계1위 범퍼빔 배터리트레이, SuperLite(LWRT) 세계1위 언더바디 헤드라이너,
+          BuffLite(EPP) 범퍼흡수재 차음재 전자파차폐, IntermLite(PMC) 내장재, SMC 외장패널 배터리팩케이스.
+          경쟁사: 도레이 Hexcel SGL Carbon.
+          작성원칙: 실제최신뉴스기반, sections 6개이상.
+          JSON만출력(마크다운없이):
           {"summary":"...","impact_score":"HIGH","analysis_period":"...","accuracy_summary":{"overall_score":80,"has_ai_inference":true,"note":"..."},"data_sources":[{"name":"...","type":"market"}],"sections":[{"title":"...","content":"...","tag":"EV동향","accuracy_level":"HIGH","source_type":"market"}],"products_affected":["StrongLite (GMT)"],"actions":{"sales":"...","rd":"...","management":"..."},"timeline":{"short":"...","mid":"...","long":"..."}}"""
 
-          TOPICS = {
-              "weekly": "최근 1개월 글로벌 자동차 및 전기차 산업 주요 동향을 분석하고 한화첨단소재 소재 수요 영향을 분석하세요. EV 판매, OEM 신차, 배터리 기술, 경량화 트렌드, 관련 정책 포함. sections 6개 이상.",
-              "ev":     "글로벌 전기차 시장 최신 동향과 각국 EV 정책 변화(미국 IRA, EU 탄소규제, 중국 NEV)를 분석하고 한화첨단소재 제품 수요 영향을 분석하세요. sections 6개 이상.",
-              "oem":    "현대기아 BMW GM Toyota Tesla BYD 등 주요 OEM의 최근 신차 출시 플랫폼 전환 소재 채용 발표를 분석하고 한화첨단소재 사업 기회를 분석하세요. sections 6개 이상.",
-              "materials": "자동차 항공 경량복합소재 기술 트렌드 CFRP GFRP 시장 변화 도레이 Hexcel SGL Carbon 경쟁사 동향을 분석하고 한화첨단소재 기술 포지셔닝과 R&D 방향을 분석하세요. sections 6개 이상."
+          content = f"오늘 날짜: $DATE_ONLY\n\n$PROMPT"
+
+          payload = {
+              "model": "claude-sonnet-4-5",
+              "max_tokens": 4000,
+              "system": system,
+              "messages": [{"role": "user", "content": content}]
+          }
+          print(json.dumps(payload, ensure_ascii=False))
+          PYEOF
+
+            # Claude API 호출
+            RESPONSE=$(curl -s -X POST https://api.anthropic.com/v1/messages \
+              -H "x-api-key: ${ANTHROPIC_API_KEY}" \
+              -H "anthropic-version: 2023-06-01" \
+              -H "content-type: application/json" \
+              -d @/tmp/payload_${TOPIC_ID}.json)
+
+            # 응답에서 JSON 추출 + generated_at 추가
+            python3 - <<PYEOF > "$OUT"
+          import json, re, sys
+          response = json.loads('''$(echo "$RESPONSE" | python3 -c "import json,sys; print(json.dumps(sys.stdin.read()))")''')
+          text = response.get('content', [{}])[0].get('text', '')
+          match = re.search(r'\{[\s\S]*\}', text)
+          if match:
+              result = json.loads(match.group())
+              result['generated_at'] = "$TODAY"
+              print(json.dumps(result, ensure_ascii=False, indent=2))
+          else:
+              fallback = {"error": "parse_failed", "generated_at": "$TODAY", "summary": "분석 데이터 생성 실패"}
+              print(json.dumps(fallback, ensure_ascii=False))
+          PYEOF
+
+            echo "✓ ${OUT} 완료"
           }
 
-          def call_claude(topic_id, prompt):
-              print(f"▶ [{topic_id}] 분석 시작...")
-              payload = {
-                  "model": "claude-sonnet-4-5",
-                  "max_tokens": 4000,
-                  "system": SYSTEM,
-                  "messages": [{"role": "user", "content": f"오늘 날짜: {DATE_ONLY}\n\n{prompt}"}]
-              }
-              data = json.dumps(payload).encode("utf-8")
-              req = urllib.request.Request(
-                  "https://api.anthropic.com/v1/messages",
-                  data=data,
-                  headers={
-                      "x-api-key": API_KEY,
-                      "anthropic-version": "2023-06-01",
-                      "content-type": "application/json"
-                  }
-              )
-              try:
-                  with urllib.request.urlopen(req, timeout=120) as resp:
-                      body = json.loads(resp.read().decode("utf-8"))
-                  text = body.get("content", [{}])[0].get("text", "")
-                  match = re.search(r'\{[\s\S]*\}', text)
-                  if match:
-                      result = json.loads(match.group())
-                      result["generated_at"] = TIMESTAMP
-                      return result
-                  else:
-                      print(f"  ⚠ JSON 파싱 실패, raw: {text[:200]}")
-                      return {"error": "parse_failed", "generated_at": TIMESTAMP, "summary": "분석 생성 실패"}
-              except Exception as e:
-                  print(f"  ✗ API 오류: {e}")
-                  return {"error": str(e), "generated_at": TIMESTAMP, "summary": "API 오류 발생"}
+          # 4개 순차 실행 (API rate limit 방지)
+          call_claude "weekly" "최근 1개월 글로벌 자동차 및 전기차 산업 주요 동향을 분석하고 한화첨단소재 소재 수요 영향을 분석하세요. EV 판매, OEM 신차, 배터리 기술, 경량화 트렌드, 관련 정책 포함. sections 6개 이상."
+          sleep 10
+          call_claude "ev" "글로벌 전기차 시장 최신 동향과 각국 EV 정책 변화(미국 IRA, EU 탄소규제, 중국 NEV)를 분석하고 한화첨단소재 제품 수요 영향을 분석하세요. sections 6개 이상."
+          sleep 10
+          call_claude "oem" "현대기아 BMW GM Toyota Tesla BYD 등 주요 OEM의 최근 신차 출시 플랫폼 전환 소재 채용 발표를 분석하고 한화첨단소재 사업 기회를 분석하세요. sections 6개 이상."
+          sleep 10
+          call_claude "materials" "자동차 항공 경량복합소재 기술 트렌드 CFRP GFRP 시장 변화 도레이 Hexcel SGL Carbon 경쟁사 동향을 분석하고 한화첨단소재 기술 포지셔닝과 R&D 방향을 분석하세요. sections 6개 이상."
 
-          import time
-          for topic_id, prompt in TOPICS.items():
-              result = call_claude(topic_id, prompt)
-              out_path = f"data/{topic_id}.json"
-              with open(out_path, "w", encoding="utf-8") as f:
-                  json.dump(result, f, ensure_ascii=False, indent=2)
-              print(f"  ✓ {out_path} 저장 완료")
-              if topic_id != "materials":
-                  time.sleep(10)
-
-          print("✅ 전체 완료")
-          ENDOFSCRIPT
-
-          python3 /tmp/generate.py
-
-      - name: Commit & push
+      - name: Commit & push JSON
         run: |
           git config user.name "github-actions[bot]"
           git config user.email "github-actions[bot]@users.noreply.github.com"
@@ -120,92 +94,104 @@ jobs:
           git push
 
       - name: Send email notification
-        if: ${{ secrets.GMAIL_USER != '' }}
         env:
           GMAIL_USER: ${{ secrets.GMAIL_USER }}
           GMAIL_APP_PASSWORD: ${{ secrets.GMAIL_APP_PASSWORD }}
           NOTIFY_EMAIL: ${{ secrets.NOTIFY_EMAIL }}
         run: |
-          cat > /tmp/send_mail.py << 'ENDOFMAIL'
-          import smtplib, json, os
+          TODAY=$(TZ='Asia/Seoul' date '+%Y년 %m월 %d일 %H시 %M분')
+
+          # weekly.json에서 summary 추출
+          SUMMARY=$(python3 -c "
+          import json
+          try:
+              with open('data/weekly.json') as f:
+                  d = json.load(f)
+              print(d.get('summary','분석 완료'))
+          except:
+              print('분석이 완료되었습니다.')
+          ")
+
+          IMPACT=$(python3 -c "
+          import json
+          try:
+              with open('data/weekly.json') as f:
+                  d = json.load(f)
+              print(d.get('impact_score','MEDIUM'))
+          except:
+              print('MEDIUM')
+          ")
+
+          python3 - <<PYEOF
+          import smtplib
           from email.mime.multipart import MIMEMultipart
           from email.mime.text import MIMEText
-          from datetime import datetime, timezone, timedelta
+          import os
 
-          KST = timezone(timedelta(hours=9))
-          now = datetime.now(KST).strftime("%Y년 %m월 %d일 %H시 %M분")
+          gmail_user     = os.environ['GMAIL_USER']
+          gmail_password = os.environ['GMAIL_APP_PASSWORD']
+          to_email       = os.environ['NOTIFY_EMAIL']
 
-          gmail_user     = os.environ.get("GMAIL_USER", "")
-          gmail_password = os.environ.get("GMAIL_APP_PASSWORD", "")
-          to_email       = os.environ.get("NOTIFY_EMAIL", "")
+          subject = f"[한화첨단소재 Intelligence] 분석 갱신 완료 — $TODAY"
 
-          if not all([gmail_user, gmail_password, to_email]):
-              print("이메일 설정 없음, 스킵")
-              exit(0)
-
-          try:
-              with open("data/weekly.json", encoding="utf-8") as f:
-                  d = json.load(f)
-              summary = d.get("summary", "분석 완료")
-              impact  = d.get("impact_score", "MEDIUM")
-          except:
-              summary = "분석이 완료되었습니다."
-              impact  = "MEDIUM"
-
-          subject = f"[한화첨단소재 Intelligence] 분석 갱신 완료 — {now}"
           html = f"""
           <html><body style="font-family:'Apple SD Gothic Neo',sans-serif;background:#faf8f4;margin:0;padding:20px">
           <div style="max-width:600px;margin:0 auto;background:#fff;border-radius:16px;overflow:hidden;box-shadow:0 4px 24px rgba(0,0,0,.08)">
-            <div style="background:#1a1814;padding:24px 28px">
-              <div style="display:inline-block;width:36px;height:36px;border-radius:8px;background:#e8541a;text-align:center;line-height:36px;font-size:16px;color:#fff;font-weight:700;vertical-align:middle;margin-right:12px">H</div>
-              <span style="color:#fff;font-size:15px;font-weight:700;vertical-align:middle">Hanwha Advanced Materials</span>
-              <div style="color:#9c9288;font-size:10px;letter-spacing:.12em;text-transform:uppercase;margin-top:6px">Market Intelligence · AI Powered</div>
+            <div style="background:#1a1814;padding:24px 28px;display:flex;align-items:center;gap:12px">
+              <div style="width:36px;height:36px;border-radius:8px;background:#e8541a;display:inline-flex;align-items:center;justify-content:center;font-size:16px;color:#fff;font-weight:700">H</div>
+              <div>
+                <div style="color:#fff;font-size:15px;font-weight:700">Hanwha Advanced Materials</div>
+                <div style="color:#9c9288;font-size:10px;letter-spacing:.12em;text-transform:uppercase;margin-top:2px">Market Intelligence · AI Powered</div>
+              </div>
             </div>
             <div style="padding:28px">
               <div style="font-size:10px;font-weight:600;color:#e8541a;letter-spacing:.15em;text-transform:uppercase;margin-bottom:6px">Intelligence Report</div>
-              <div style="font-size:20px;font-weight:700;color:#1a1814;margin-bottom:4px">분석 갱신 완료</div>
-              <div style="font-size:12px;color:#9c9288;margin-bottom:20px">{now} 기준</div>
+              <div style="font-size:20px;font-weight:700;color:#1a1814;margin-bottom:4px">주간 종합 분석 갱신 완료</div>
+              <div style="font-size:12px;color:#9c9288;margin-bottom:20px">$TODAY 기준</div>
+
               <div style="background:#fff4ef;border-left:3px solid #e8541a;border-radius:8px;padding:14px 16px;margin-bottom:20px">
                 <div style="font-size:10px;font-weight:600;color:#e8541a;letter-spacing:.12em;text-transform:uppercase;margin-bottom:6px">Executive Summary</div>
-                <div style="font-size:13px;color:#3d3830;line-height:1.7">{summary}</div>
+                <div style="font-size:13px;color:#3d3830;line-height:1.7">$SUMMARY</div>
               </div>
-              <div style="display:flex;gap:10px;margin-bottom:24px">
-                <div style="background:#f2ede6;border-radius:8px;padding:10px 14px;flex:1">
+
+              <div style="display:flex;gap:10px;margin-bottom:24px;flex-wrap:wrap">
+                <div style="background:#f2ede6;border-radius:8px;padding:10px 14px;flex:1;min-width:120px">
                   <div style="font-size:10px;color:#9c9288;margin-bottom:4px">Impact Score</div>
-                  <div style="font-size:16px;font-weight:700;color:#dc2626">{impact}</div>
+                  <div style="font-size:16px;font-weight:700;color:#dc2626">$IMPACT</div>
                 </div>
-                <div style="background:#f2ede6;border-radius:8px;padding:10px 14px;flex:1">
+                <div style="background:#f2ede6;border-radius:8px;padding:10px 14px;flex:1;min-width:120px">
                   <div style="font-size:10px;color:#9c9288;margin-bottom:4px">분석 모듈</div>
                   <div style="font-size:14px;font-weight:600;color:#1a1814">4개 완료</div>
                 </div>
-                <div style="background:#f2ede6;border-radius:8px;padding:10px 14px;flex:1">
+                <div style="background:#f2ede6;border-radius:8px;padding:10px 14px;flex:1;min-width:120px">
                   <div style="font-size:10px;color:#9c9288;margin-bottom:4px">AI 모델</div>
                   <div style="font-size:12px;font-weight:600;color:#1a1814">Claude Sonnet</div>
                 </div>
               </div>
-              <a href="https://winwinhyun.github.io/HAMC/" style="display:block;background:#e8541a;color:#fff;text-align:center;padding:14px;border-radius:10px;text-decoration:none;font-weight:600;font-size:14px">
+
+              <a href="https://winwinhyun.github.io/HAMC/"
+                 style="display:block;background:#e8541a;color:#fff;text-align:center;padding:14px;border-radius:10px;text-decoration:none;font-weight:600;font-size:14px">
                 Intelligence Report 보기 →
               </a>
             </div>
             <div style="background:#f2ede6;padding:14px 28px;font-size:11px;color:#9c9288;text-align:center">
-              자동 발송 · 3시간마다 갱신 · Powered by Claude AI
+              자동 발송 메일 · 3시간마다 갱신 · Powered by Claude AI
             </div>
           </div>
-          </body></html>"""
+          </body></html>
+          """
 
-          msg = MIMEMultipart("alternative")
-          msg["Subject"] = subject
-          msg["From"]    = gmail_user
-          msg["To"]      = to_email
-          msg.attach(MIMEText(html, "html", "utf-8"))
+          msg = MIMEMultipart('alternative')
+          msg['Subject'] = subject
+          msg['From']    = gmail_user
+          msg['To']      = to_email
+          msg.attach(MIMEText(html, 'html', 'utf-8'))
 
           try:
-              with smtplib.SMTP_SSL("smtp.gmail.com", 465) as server:
+              with smtplib.SMTP_SSL('smtp.gmail.com', 465) as server:
                   server.login(gmail_user, gmail_password)
                   server.sendmail(gmail_user, to_email, msg.as_string())
               print("✓ 이메일 발송 완료")
           except Exception as e:
               print(f"이메일 발송 실패: {e}")
-          ENDOFMAIL
-
-          python3 /tmp/send_mail.py
+          PYEOF
