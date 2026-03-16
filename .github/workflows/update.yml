@@ -1,4 +1,4 @@
-0name: Intelligence Update & Notify
+name: Intelligence Update & Notify
 
 on:
   schedule:
