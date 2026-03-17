@@ -1,45 +1,41 @@
 """
-generate.py — 2단계 파이프라인
-━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-1단계: web_search 툴로 최신 뉴스 수집 + 자유 형식 심층 분석 리포트 작성
-         (Claude가 검색 결과를 충분히 소화하고 길게 분석)
-2단계: 1단계 리포트를 입력으로 받아 JSON 구조화
-         (검색 없이 순수 구조화만 담당 → 파싱 안정성 ↑)
-━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+generate.py — 2단계 파이프라인 (공식 문서 기반 재작성)
+
+핵심 변경:
+- web_search는 단일 API 호출로 자동 처리됨 (루프 불필요)
+- 1단계: 검색 포함 단일 호출 → 분석 리포트
+- 2단계: 리포트 → JSON 구조화 (검색 없음)
 """
 import json
 import re
 import urllib.request
+import urllib.error
 import os
 import time
 from datetime import datetime, timezone, timedelta, date
 
 API_KEY = os.environ.get("ANTHROPIC_API_KEY", "")
 
-KST = timezone(timedelta(hours=9))
-now = datetime.now(KST)
-DATE_ONLY   = now.strftime("%Y년 %m월 %d일")
-TIMESTAMP   = now.strftime("%Y년 %m월 %d일 %H시 %M분")
+KST       = timezone(timedelta(hours=9))
+now       = datetime.now(KST)
+DATE_ONLY = now.strftime("%Y년 %m월 %d일")
+TIMESTAMP = now.strftime("%Y년 %m월 %d일 %H시 %M분")
 
-today      = date.today()
+today = date.today()
 
 def make_period(days):
     start = today - timedelta(days=days)
     return f"{start.strftime('%Y년 %m월 %d일')} ~ {today.strftime('%Y년 %m월 %d일')}"
 
-# 토픽별 집계 기간
 PERIODS = {
-    "weekly":    make_period(7),   # 주간 종합: 최근 7일
-    "ev":        make_period(30),  # EV/정책:   최근 30일
-    "oem":       make_period(30),  # OEM 동향:  최근 30일
-    "materials": make_period(60),  # 소재 기술: 최근 60일 (기술 발표 주기 고려)
-    "solar":     make_period(30),  # 태양광:    최근 30일
+    "weekly":    make_period(7),
+    "ev":        make_period(30),
+    "oem":       make_period(30),
+    "materials": make_period(60),
+    "solar":     make_period(30),
 }
-
-# 하위 호환용 (SYSTEM_STAGE1 템플릿에서 사용)
 SEARCH_PERIOD = make_period(30)
 
-# ── 제품 컨텍스트 (두 단계 공통) ──────────────────
 PRODUCT_CONTEXT = """
 Hanwha Advanced Materials product lines (internal reference only):
 - StrongLite(GMT): Glass fiber Mat reinforced Thermoplastics. World #1 market share.
@@ -54,148 +50,87 @@ Hanwha Advanced Materials product lines (internal reference only):
   Applications: exterior body panels, battery pack cases, pickup truck beds, EV front trunks.
 - Solar Materials: EVA/POE Encapsulant + Backsheet for PV modules.
   Production capacity: 9GW/year. Key customer: Hanwha Q CELLS.
-Key competitors: Toray, Hexcel, SGL Carbon (composites); Hangzhou First Applied Material, Cybrid Technologies (solar).
-Annual revenue: KRW 1.2308 trillion (2024). Overseas revenue ratio: 61%. 8 overseas production sites.
+Key competitors: Toray, Hexcel, SGL Carbon; Hangzhou First Applied Material, Cybrid Technologies (solar).
+Annual revenue: KRW 1.2308 trillion (2024). Overseas revenue ratio: 61%. 8 overseas sites.
 """
 
-# ── web_search 툴 정의 ──────────────────────────
+# 최신 web_search 툴 (Sonnet 4.6 지원, 동적 필터링으로 토큰 절약)
 WEB_SEARCH_TOOL = {
-    "type": "web_search_20250305",
-    "name": "web_search",
-    "max_uses": 5
+    "type": "web_search_20260209",
+    "name": "web_search"
+    # max_uses 미설정 시 기본값 사용 (동적 필터링 버전은 max_uses 불필요)
 }
 
-# ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-# 1단계 시스템 프롬프트 — 검색 + 자유 형식 분석
-# ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 SYSTEM_STAGE1 = f"""You are a senior market intelligence analyst for Hanwha Advanced Materials.
 {PRODUCT_CONTEXT}
 
-INSTRUCTIONS:
-- Use web_search tool 4-5 times to gather recent news (past 30 days).
-- After searching, write a concise analysis report in Korean.
+Use web_search to find recent news, then write a concise Korean analysis report.
 
-REPORT FORMAT (Korean, keep it focused — max 1500 words):
-1. Executive Summary (2-3 sentences with key facts/numbers)
-2. 주요 발견사항 (5-6 findings, each 2-3 sentences with specific facts)
+REPORT FORMAT (Korean, max 1200 words):
+1. Executive Summary (3-4 sentences with key facts/numbers from search)
+2. 주요 발견사항 (5-6 findings, 2-3 sentences each, cite specific facts)
 3. 경쟁사 동향 (2-3 paragraphs)
 4. 전망 및 액션 아이템 (단기/중기/장기 + 영업팀/R&D팀/경영진)
 5. 주요 출처
 
-IMPORTANT: Keep the report concise. Do NOT write JSON."""
+Do NOT write JSON. Write Korean report only."""
 
-# ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-# 2단계 시스템 프롬프트 — JSON 구조화 전용
-# ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-SYSTEM_STAGE2 = """You are a JSON formatter. Convert the provided analysis report into structured JSON.
+SYSTEM_STAGE2 = """You are a JSON formatter. Convert the analysis report into structured JSON.
 
-STRICT OUTPUT RULES:
+STRICT RULES:
 - Output ONLY valid JSON — no markdown, no code blocks, no preamble
-- NO newlines or tab characters inside any string value
-- Use "; " (semicolon + space) to separate sentences within a string
-- Preserve specific facts, numbers, company names, and dates from the report
-- summary must be 5-6 sentences (comprehensive overview with key facts and numbers)
-- sections must have exactly 8 items
-- Each section content must be 3-5 sentences (rich detail)
-- actions.sales / rd / management must be 3-4 sentences each (concrete, specific)
-- timeline entries must be 4-5 sentences each (data-driven)
-- product_impact: assess impact level for each product based on the report content.
-  Keys: "StrongLite (GMT)", "SuperLite (LWRT)", "BuffLite (EPP)", "IntermLite (PMC)", "SMC", "Encapsulant (EVA/POE)"
-  Values: "HIGH", "MEDIUM", "LOW", or "NONE"
-  Be specific — not all products are affected equally by every topic."""
+- NO newlines or tabs inside string values — use "; " to separate sentences
+- summary: 5-6 sentences (comprehensive with key facts and numbers)
+- sections: exactly 8 items, each content 3-5 sentences
+- actions.sales/rd/management: 3-4 sentences each
+- timeline.short/mid/long: 4-5 sentences each
+- product_impact keys: "StrongLite (GMT)","SuperLite (LWRT)","BuffLite (EPP)","IntermLite (PMC)","SMC","Encapsulant (EVA/POE)"
+- product_impact values: "HIGH","MEDIUM","LOW","NONE" — be specific per topic"""
 
-# ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-# 토픽별 검색 지시 및 JSON 스키마
-# ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 TOPICS = {
     "weekly": {
         "label": "주간 종합",
-        "stage1_instruction": f"""Today is {DATE_ONLY}. Analyze global automotive & EV industry trends for the past 7 days ({PERIODS['weekly']}).
-Focus ONLY on news from the last 7 days — this is a WEEKLY report.
-
-Search for these topics (search each separately for best coverage):
-1. Global EV sales data and market share changes this week
-2. Major OEM announcements this week — Hyundai/Kia, Toyota, BMW, GM, Tesla, BYD
-3. Automotive lightweight composite material demand trends this week
-4. US/EU/China automotive policy changes this week
-5. EV battery and platform technology news this week
-6. Automotive supply chain and raw material price trends this week
-
-Write a comprehensive analysis report as instructed.""",
-        "json_schema": """{"summary":"[5-6 sentence Korean summary with key facts, numbers, and business implications]","impact_score":"HIGH","analysis_period":"PERIOD","accuracy_summary":{"overall_score":90,"has_ai_inference":false,"note":"[실제 검색 출처 나열]"},"data_sources":[{"name":"[source]","type":"market"},{"name":"[source]","type":"regulatory"},{"name":"[source]","type":"official"}],"sections":[{"title":"[제목]","content":"[3-5 sentence Korean content with specific facts]","tag":"EV동향","accuracy_level":"HIGH","source_type":"market"},{"title":"[제목]","content":"[content]","tag":"OEM동향","accuracy_level":"HIGH","source_type":"official"},{"title":"[제목]","content":"[content]","tag":"정책변화","accuracy_level":"HIGH","source_type":"regulatory"},{"title":"[제목]","content":"[content]","tag":"소재기술","accuracy_level":"HIGH","source_type":"market"},{"title":"[제목]","content":"[content]","tag":"경쟁사","accuracy_level":"MEDIUM","source_type":"market"},{"title":"[제목]","content":"[content]","tag":"수요예측","accuracy_level":"MEDIUM","source_type":"market"},{"title":"[제목]","content":"[content]","tag":"리스크","accuracy_level":"MEDIUM","source_type":"ai"},{"title":"[제목]","content":"[content]","tag":"친환경","accuracy_level":"MEDIUM","source_type":"market"}],"products_affected":["StrongLite (GMT)","SuperLite (LWRT)","SMC","BuffLite (EPP)"],"product_impact":{"StrongLite (GMT)":"HIGH","SuperLite (LWRT)":"HIGH","BuffLite (EPP)":"MEDIUM","IntermLite (PMC)":"LOW","SMC":"HIGH","Encapsulant (EVA/POE)":"NONE"},"actions":{"sales":"[3-4 sentence concrete sales actions in Korean]","rd":"[3-4 sentence specific R&D directions in Korean]","management":"[3-4 sentence strategic decisions in Korean]"},"timeline":{"short":"[4-5 sentence 6-month outlook in Korean with specific data]","mid":"[4-5 sentence 2-year outlook in Korean]","long":"[4-5 sentence 5-year outlook in Korean]"}}"""
+        "prompt": f"""Today is {DATE_ONLY}. Search for global automotive & EV industry news from the past 7 days ({PERIODS['weekly']}).
+Search for: EV sales, OEM announcements (Hyundai/Kia/BMW/GM/Tesla/BYD), lightweight material trends, automotive policy changes.
+Write analysis report as instructed.""",
+        "schema": """{"summary":"[5-6 sentence Korean summary]","impact_score":"HIGH","analysis_period":"PERIOD","accuracy_summary":{"overall_score":88,"has_ai_inference":false,"note":"[출처 나열]"},"data_sources":[{"name":"[source]","type":"market"},{"name":"[source]","type":"official"}],"sections":[{"title":"[제목]","content":"[3-5 sentences Korean]","tag":"EV동향","accuracy_level":"HIGH","source_type":"market"},{"title":"[제목]","content":"[content]","tag":"OEM동향","accuracy_level":"HIGH","source_type":"official"},{"title":"[제목]","content":"[content]","tag":"정책변화","accuracy_level":"HIGH","source_type":"regulatory"},{"title":"[제목]","content":"[content]","tag":"소재기술","accuracy_level":"HIGH","source_type":"market"},{"title":"[제목]","content":"[content]","tag":"경쟁사","accuracy_level":"MEDIUM","source_type":"market"},{"title":"[제목]","content":"[content]","tag":"수요예측","accuracy_level":"MEDIUM","source_type":"market"},{"title":"[제목]","content":"[content]","tag":"리스크","accuracy_level":"MEDIUM","source_type":"ai"},{"title":"[제목]","content":"[content]","tag":"친환경","accuracy_level":"MEDIUM","source_type":"market"}],"products_affected":["StrongLite (GMT)","SuperLite (LWRT)","SMC","BuffLite (EPP)"],"product_impact":{"StrongLite (GMT)":"HIGH","SuperLite (LWRT)":"HIGH","BuffLite (EPP)":"MEDIUM","IntermLite (PMC)":"LOW","SMC":"HIGH","Encapsulant (EVA/POE)":"NONE"},"actions":{"sales":"[3-4 sentences Korean]","rd":"[3-4 sentences Korean]","management":"[3-4 sentences Korean]"},"timeline":{"short":"[4-5 sentences Korean]","mid":"[4-5 sentences Korean]","long":"[4-5 sentences Korean]"}}"""
     },
     "ev": {
         "label": "EV / 정책",
-        "stage1_instruction": f"""Today is {DATE_ONLY}. Analyze global EV market and policy landscape for the past 30 days ({PERIODS['ev']}).
-
-Search for these topics separately:
-1. US IRA EV tax credits — latest updates, changes, beneficiary companies
-2. EU CO2 emission targets 2025 — automaker fines, compliance status
-3. China NEV policy — subsidies, sales mandates, BYD/CATL developments
-4. Global EV sales figures — monthly data, market share by brand/region
-5. EV charging infrastructure expansion news
-6. EV battery technology and cost reduction news
-
-Write a comprehensive analysis report as instructed.""",
-        "json_schema": """{"summary":"[5-6 sentence Korean summary with key policy facts, numbers, and implications]","impact_score":"HIGH","analysis_period":"PERIOD","accuracy_summary":{"overall_score":92,"has_ai_inference":false,"note":"[실제 검색 출처 나열]"},"data_sources":[{"name":"[source]","type":"regulatory"},{"name":"[source]","type":"market"},{"name":"[source]","type":"official"}],"sections":[{"title":"[제목]","content":"[3-5 sentence Korean content with specific policy details/numbers]","tag":"EV동향","accuracy_level":"HIGH","source_type":"market"},{"title":"[제목]","content":"[content]","tag":"정책변화","accuracy_level":"HIGH","source_type":"regulatory"},{"title":"[제목]","content":"[content]","tag":"EV동향","accuracy_level":"HIGH","source_type":"market"},{"title":"[제목]","content":"[content]","tag":"정책변화","accuracy_level":"HIGH","source_type":"regulatory"},{"title":"[제목]","content":"[content]","tag":"수요예측","accuracy_level":"MEDIUM","source_type":"market"},{"title":"[제목]","content":"[content]","tag":"경쟁사","accuracy_level":"MEDIUM","source_type":"market"},{"title":"[제목]","content":"[content]","tag":"리스크","accuracy_level":"MEDIUM","source_type":"ai"},{"title":"[제목]","content":"[content]","tag":"친환경","accuracy_level":"MEDIUM","source_type":"regulatory"}],"products_affected":["StrongLite (GMT)","SuperLite (LWRT)","BuffLite (EPP)","SMC"],"product_impact":{"StrongLite (GMT)":"HIGH","SuperLite (LWRT)":"HIGH","BuffLite (EPP)":"MEDIUM","IntermLite (PMC)":"LOW","SMC":"HIGH","Encapsulant (EVA/POE)":"NONE"},"actions":{"sales":"[3-4 sentence concrete sales actions]","rd":"[3-4 sentence R&D directions]","management":"[3-4 sentence strategic decisions]"},"timeline":{"short":"[4-5 sentence 6-month outlook based on real policy data]","mid":"[4-5 sentence 2-year outlook]","long":"[4-5 sentence 5-year outlook]"}}"""
+        "prompt": f"""Today is {DATE_ONLY}. Search for EV market and policy news from the past 30 days ({PERIODS['ev']}).
+Search for: US IRA EV credits, EU CO2 regulations, China NEV policy, global EV sales figures, battery technology.
+Write analysis report as instructed.""",
+        "schema": """{"summary":"[5-6 sentence Korean summary with policy facts]","impact_score":"HIGH","analysis_period":"PERIOD","accuracy_summary":{"overall_score":90,"has_ai_inference":false,"note":"[출처 나열]"},"data_sources":[{"name":"[source]","type":"regulatory"},{"name":"[source]","type":"market"}],"sections":[{"title":"[제목]","content":"[3-5 sentences Korean]","tag":"EV동향","accuracy_level":"HIGH","source_type":"market"},{"title":"[제목]","content":"[content]","tag":"정책변화","accuracy_level":"HIGH","source_type":"regulatory"},{"title":"[제목]","content":"[content]","tag":"EV동향","accuracy_level":"HIGH","source_type":"market"},{"title":"[제목]","content":"[content]","tag":"정책변화","accuracy_level":"HIGH","source_type":"regulatory"},{"title":"[제목]","content":"[content]","tag":"수요예측","accuracy_level":"MEDIUM","source_type":"market"},{"title":"[제목]","content":"[content]","tag":"경쟁사","accuracy_level":"MEDIUM","source_type":"market"},{"title":"[제목]","content":"[content]","tag":"리스크","accuracy_level":"MEDIUM","source_type":"ai"},{"title":"[제목]","content":"[content]","tag":"친환경","accuracy_level":"MEDIUM","source_type":"regulatory"}],"products_affected":["StrongLite (GMT)","SuperLite (LWRT)","BuffLite (EPP)","SMC"],"product_impact":{"StrongLite (GMT)":"HIGH","SuperLite (LWRT)":"HIGH","BuffLite (EPP)":"MEDIUM","IntermLite (PMC)":"LOW","SMC":"HIGH","Encapsulant (EVA/POE)":"NONE"},"actions":{"sales":"[3-4 sentences]","rd":"[3-4 sentences]","management":"[3-4 sentences]"},"timeline":{"short":"[4-5 sentences]","mid":"[4-5 sentences]","long":"[4-5 sentences]"}}"""
     },
     "oem": {
         "label": "OEM 동향",
-        "stage1_instruction": f"""Today is {DATE_ONLY}. Analyze major OEM automotive developments for the past 30 days ({PERIODS['oem']}).
-
-Search for these topics separately:
-1. Hyundai/Kia — new EV models, production plans, material announcements
-2. Tesla — production numbers, new model updates, cost reduction moves
-3. BYD — sales records, overseas expansion, new platform
-4. BMW/Mercedes/Volkswagen — EV transition progress, material decisions
-5. GM/Ford/Stellantis — EV strategy updates, plant investments
-6. Toyota — hybrid vs EV strategy, new model announcements
-7. Automotive lightweight material adoption by OEMs
-
-Write a comprehensive analysis report as instructed.""",
-        "json_schema": """{"summary":"[5-6 sentence Korean summary with key OEM news, model names, and business impact]","impact_score":"HIGH","analysis_period":"PERIOD","accuracy_summary":{"overall_score":89,"has_ai_inference":false,"note":"[실제 검색 출처 나열]"},"data_sources":[{"name":"[source]","type":"official"},{"name":"[source]","type":"market"},{"name":"[source]","type":"market"}],"sections":[{"title":"[제목]","content":"[3-5 sentence Korean content with specific model names and facts]","tag":"OEM동향","accuracy_level":"HIGH","source_type":"official"},{"title":"[제목]","content":"[content]","tag":"OEM동향","accuracy_level":"HIGH","source_type":"official"},{"title":"[제목]","content":"[content]","tag":"OEM동향","accuracy_level":"HIGH","source_type":"market"},{"title":"[제목]","content":"[content]","tag":"EV동향","accuracy_level":"HIGH","source_type":"market"},{"title":"[제목]","content":"[content]","tag":"소재기술","accuracy_level":"MEDIUM","source_type":"market"},{"title":"[제목]","content":"[content]","tag":"수요예측","accuracy_level":"MEDIUM","source_type":"ai"},{"title":"[제목]","content":"[content]","tag":"경쟁사","accuracy_level":"MEDIUM","source_type":"ai"},{"title":"[제목]","content":"[content]","tag":"리스크","accuracy_level":"MEDIUM","source_type":"ai"}],"products_affected":["StrongLite (GMT)","SuperLite (LWRT)","IntermLite (PMC)","SMC","BuffLite (EPP)"],"product_impact":{"StrongLite (GMT)":"HIGH","SuperLite (LWRT)":"HIGH","BuffLite (EPP)":"MEDIUM","IntermLite (PMC)":"LOW","SMC":"HIGH","Encapsulant (EVA/POE)":"NONE"},"actions":{"sales":"[3-4 sentence concrete OEM-specific sales actions]","rd":"[3-4 sentence R&D directions based on OEM needs]","management":"[3-4 sentence strategic partnership decisions]"},"timeline":{"short":"[4-5 sentence 6-month outlook by OEM]","mid":"[4-5 sentence 2-year platform transition outlook]","long":"[4-5 sentence 5-year OEM landscape outlook]"}}"""
+        "prompt": f"""Today is {DATE_ONLY}. Search for major OEM automotive news from the past 30 days ({PERIODS['oem']}).
+Search for: Hyundai/Kia new EVs, Tesla production, BYD expansion, BMW/GM/Toyota strategy, lightweight material adoption.
+Write analysis report as instructed.""",
+        "schema": """{"summary":"[5-6 sentence Korean summary with OEM facts]","impact_score":"HIGH","analysis_period":"PERIOD","accuracy_summary":{"overall_score":87,"has_ai_inference":false,"note":"[출처 나열]"},"data_sources":[{"name":"[source]","type":"official"},{"name":"[source]","type":"market"}],"sections":[{"title":"[제목]","content":"[3-5 sentences Korean]","tag":"OEM동향","accuracy_level":"HIGH","source_type":"official"},{"title":"[제목]","content":"[content]","tag":"OEM동향","accuracy_level":"HIGH","source_type":"official"},{"title":"[제목]","content":"[content]","tag":"OEM동향","accuracy_level":"HIGH","source_type":"market"},{"title":"[제목]","content":"[content]","tag":"EV동향","accuracy_level":"HIGH","source_type":"market"},{"title":"[제목]","content":"[content]","tag":"소재기술","accuracy_level":"MEDIUM","source_type":"market"},{"title":"[제목]","content":"[content]","tag":"수요예측","accuracy_level":"MEDIUM","source_type":"ai"},{"title":"[제목]","content":"[content]","tag":"경쟁사","accuracy_level":"MEDIUM","source_type":"ai"},{"title":"[제목]","content":"[content]","tag":"리스크","accuracy_level":"MEDIUM","source_type":"ai"}],"products_affected":["StrongLite (GMT)","SuperLite (LWRT)","IntermLite (PMC)","SMC","BuffLite (EPP)"],"product_impact":{"StrongLite (GMT)":"HIGH","SuperLite (LWRT)":"HIGH","BuffLite (EPP)":"MEDIUM","IntermLite (PMC)":"MEDIUM","SMC":"HIGH","Encapsulant (EVA/POE)":"NONE"},"actions":{"sales":"[3-4 sentences]","rd":"[3-4 sentences]","management":"[3-4 sentences]"},"timeline":{"short":"[4-5 sentences]","mid":"[4-5 sentences]","long":"[4-5 sentences]"}}"""
     },
     "materials": {
         "label": "소재 기술",
-        "stage1_instruction": f"""Today is {DATE_ONLY}. Analyze automotive lightweight composite material trends for the past 60 days ({PERIODS['materials']}).
-Use 60-day window because technology announcements and R&D news have longer cycles.
-
-Search for these topics separately:
-1. CFRP carbon fiber composite material — market size, price, demand news
-2. Toray Industries — latest announcements, new products, automotive contracts
-3. Hexcel Corporation — recent news, aerospace/automotive developments
-4. SGL Carbon — new developments, EV battery material news
-5. Thermoplastic composite materials — new applications, technology advances
-6. EV battery enclosure / housing material trends
-7. Recycled composite materials — sustainability regulations, GRS certification trends
-
-Write a comprehensive analysis report as instructed.""",
-        "json_schema": """{"summary":"[5-6 sentence Korean summary with key material trends, competitor moves, and implications]","impact_score":"MEDIUM","analysis_period":"PERIOD","accuracy_summary":{"overall_score":86,"has_ai_inference":false,"note":"[실제 검색 출처 나열]"},"data_sources":[{"name":"[source]","type":"market"},{"name":"[source]","type":"market"},{"name":"[source]","type":"official"}],"sections":[{"title":"[제목]","content":"[3-5 sentence Korean content with specific technology facts]","tag":"소재기술","accuracy_level":"HIGH","source_type":"market"},{"title":"[제목]","content":"[content about specific competitor]","tag":"경쟁사","accuracy_level":"HIGH","source_type":"market"},{"title":"[제목]","content":"[content about another competitor]","tag":"경쟁사","accuracy_level":"HIGH","source_type":"market"},{"title":"[제목]","content":"[content]","tag":"소재기술","accuracy_level":"HIGH","source_type":"market"},{"title":"[제목]","content":"[content]","tag":"친환경","accuracy_level":"MEDIUM","source_type":"regulatory"},{"title":"[제목]","content":"[content]","tag":"수요예측","accuracy_level":"MEDIUM","source_type":"market"},{"title":"[제목]","content":"[content]","tag":"리스크","accuracy_level":"MEDIUM","source_type":"ai"},{"title":"[제목]","content":"[content]","tag":"EV동향","accuracy_level":"MEDIUM","source_type":"market"}],"products_affected":["StrongLite (GMT)","SuperLite (LWRT)","BuffLite (EPP)","SMC"],"product_impact":{"StrongLite (GMT)":"HIGH","SuperLite (LWRT)":"HIGH","BuffLite (EPP)":"MEDIUM","IntermLite (PMC)":"LOW","SMC":"HIGH","Encapsulant (EVA/POE)":"NONE"},"actions":{"sales":"[3-4 sentence concrete sales actions citing competitor weaknesses]","rd":"[3-4 sentence specific technology R&D priorities]","management":"[3-4 sentence strategic positioning decisions]"},"timeline":{"short":"[4-5 sentence 6-month material market outlook]","mid":"[4-5 sentence 2-year technology transition outlook]","long":"[4-5 sentence 5-year material paradigm outlook]"}}"""
+        "prompt": f"""Today is {DATE_ONLY}. Search for lightweight composite material news from the past 60 days ({PERIODS['materials']}).
+Search for: CFRP/carbon fiber market, Toray news, Hexcel news, SGL Carbon news, EV battery housing materials, recycled composites.
+Write analysis report as instructed.""",
+        "schema": """{"summary":"[5-6 sentence Korean summary with material facts]","impact_score":"MEDIUM","analysis_period":"PERIOD","accuracy_summary":{"overall_score":85,"has_ai_inference":false,"note":"[출처 나열]"},"data_sources":[{"name":"[source]","type":"market"},{"name":"[source]","type":"official"}],"sections":[{"title":"[제목]","content":"[3-5 sentences Korean]","tag":"소재기술","accuracy_level":"HIGH","source_type":"market"},{"title":"[제목]","content":"[content about Toray]","tag":"경쟁사","accuracy_level":"HIGH","source_type":"market"},{"title":"[제목]","content":"[content about Hexcel or SGL]","tag":"경쟁사","accuracy_level":"HIGH","source_type":"market"},{"title":"[제목]","content":"[content]","tag":"소재기술","accuracy_level":"HIGH","source_type":"market"},{"title":"[제목]","content":"[content]","tag":"친환경","accuracy_level":"MEDIUM","source_type":"regulatory"},{"title":"[제목]","content":"[content]","tag":"수요예측","accuracy_level":"MEDIUM","source_type":"market"},{"title":"[제목]","content":"[content]","tag":"리스크","accuracy_level":"MEDIUM","source_type":"ai"},{"title":"[제목]","content":"[content]","tag":"EV동향","accuracy_level":"MEDIUM","source_type":"market"}],"products_affected":["StrongLite (GMT)","SuperLite (LWRT)","BuffLite (EPP)","SMC"],"product_impact":{"StrongLite (GMT)":"HIGH","SuperLite (LWRT)":"HIGH","BuffLite (EPP)":"MEDIUM","IntermLite (PMC)":"LOW","SMC":"HIGH","Encapsulant (EVA/POE)":"NONE"},"actions":{"sales":"[3-4 sentences]","rd":"[3-4 sentences]","management":"[3-4 sentences]"},"timeline":{"short":"[4-5 sentences]","mid":"[4-5 sentences]","long":"[4-5 sentences]"}}"""
     },
     "solar": {
         "label": "태양광 소재",
-        "stage1_instruction": f"""Today is {DATE_ONLY}. Analyze solar PV materials market for the past 30 days ({PERIODS['solar']}).
-
-Search for these topics separately:
-1. Solar PV encapsulant EVA POE market — pricing, demand, capacity news
-2. Hanwha Q CELLS — latest news, production, US factory updates
-3. US IRA solar manufacturing tax credits — latest updates, beneficiaries
-4. China solar supply chain — overcapacity, pricing, export restrictions
-5. Floating solar market — growth, new projects, material requirements
-6. Solar backsheet market — demand trends, new materials
-7. Global solar installation forecast 2025 — key markets, growth rates
-
-Write a comprehensive analysis report as instructed.""",
-        "json_schema": """{"summary":"[5-6 sentence Korean summary with key solar market facts, policy updates, and business impact]","impact_score":"HIGH","analysis_period":"PERIOD","accuracy_summary":{"overall_score":90,"has_ai_inference":false,"note":"[실제 검색 출처 나열]"},"data_sources":[{"name":"[source]","type":"market"},{"name":"[source]","type":"regulatory"},{"name":"[source]","type":"official"}],"sections":[{"title":"[제목]","content":"[3-5 sentence Korean content with specific solar market numbers]","tag":"태양광시장","accuracy_level":"HIGH","source_type":"market"},{"title":"[제목]","content":"[content]","tag":"정책변화","accuracy_level":"HIGH","source_type":"regulatory"},{"title":"[제목]","content":"[content about Hanwha Q CELLS or key customer]","tag":"OEM동향","accuracy_level":"HIGH","source_type":"official"},{"title":"[제목]","content":"[content]","tag":"경쟁사","accuracy_level":"HIGH","source_type":"market"},{"title":"[제목]","content":"[content]","tag":"태양광시장","accuracy_level":"MEDIUM","source_type":"market"},{"title":"[제목]","content":"[content]","tag":"소재기술","accuracy_level":"MEDIUM","source_type":"market"},{"title":"[제목]","content":"[content]","tag":"수요예측","accuracy_level":"MEDIUM","source_type":"ai"},{"title":"[제목]","content":"[content]","tag":"리스크","accuracy_level":"MEDIUM","source_type":"ai"}],"products_affected":["Encapsulant (EVA/POE)","Backsheet","태양광 소재 사업부"],"product_impact":{"StrongLite (GMT)":"NONE","SuperLite (LWRT)":"NONE","BuffLite (EPP)":"NONE","IntermLite (PMC)":"NONE","SMC":"LOW","Encapsulant (EVA/POE)":"HIGH"},"actions":{"sales":"[3-4 sentence concrete solar sales actions]","rd":"[3-4 sentence solar material R&D directions]","management":"[3-4 sentence strategic solar business decisions]"},"timeline":{"short":"[4-5 sentence 6-month solar market outlook]","mid":"[4-5 sentence 2-year solar growth outlook]","long":"[4-5 sentence 5-year solar material technology outlook]"}}"""
+        "prompt": f"""Today is {DATE_ONLY}. Search for solar PV materials market news from the past 30 days ({PERIODS['solar']}).
+Search for: EVA/POE encapsulant market, Hanwha Q CELLS news, US IRA solar credits, China solar supply chain, floating solar, backsheet market.
+Write analysis report as instructed.""",
+        "schema": """{"summary":"[5-6 sentence Korean summary with solar market facts]","impact_score":"HIGH","analysis_period":"PERIOD","accuracy_summary":{"overall_score":88,"has_ai_inference":false,"note":"[출처 나열]"},"data_sources":[{"name":"[source]","type":"market"},{"name":"[source]","type":"regulatory"},{"name":"[source]","type":"official"}],"sections":[{"title":"[제목]","content":"[3-5 sentences Korean]","tag":"태양광시장","accuracy_level":"HIGH","source_type":"market"},{"title":"[제목]","content":"[content]","tag":"정책변화","accuracy_level":"HIGH","source_type":"regulatory"},{"title":"[제목]","content":"[content about Hanwha Q CELLS]","tag":"OEM동향","accuracy_level":"HIGH","source_type":"official"},{"title":"[제목]","content":"[content]","tag":"경쟁사","accuracy_level":"HIGH","source_type":"market"},{"title":"[제목]","content":"[content]","tag":"태양광시장","accuracy_level":"MEDIUM","source_type":"market"},{"title":"[제목]","content":"[content]","tag":"소재기술","accuracy_level":"MEDIUM","source_type":"market"},{"title":"[제목]","content":"[content]","tag":"수요예측","accuracy_level":"MEDIUM","source_type":"ai"},{"title":"[제목]","content":"[content]","tag":"리스크","accuracy_level":"MEDIUM","source_type":"ai"}],"products_affected":["Encapsulant (EVA/POE)","Backsheet","태양광 소재 사업부"],"product_impact":{"StrongLite (GMT)":"NONE","SuperLite (LWRT)":"NONE","BuffLite (EPP)":"NONE","IntermLite (PMC)":"NONE","SMC":"LOW","Encapsulant (EVA/POE)":"HIGH"},"actions":{"sales":"[3-4 sentences]","rd":"[3-4 sentences]","management":"[3-4 sentences]"},"timeline":{"short":"[4-5 sentences]","mid":"[4-5 sentences]","long":"[4-5 sentences]"}}"""
     }
 }
 
 
 # ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-# 공통 유틸
+# API 호출
 # ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-def api_request(payload, max_retries=4):
-    """API 호출 — 429 시 지수 백오프 재시도, 400 시 본문 출력"""
+def call_api(payload, max_retries=3):
+    """단순 1회 API 호출 + 429 재시도"""
     data = json.dumps(payload).encode("utf-8")
     for attempt in range(max_retries):
         req = urllib.request.Request(
@@ -208,98 +143,35 @@ def api_request(payload, max_retries=4):
             }
         )
         try:
-            with urllib.request.urlopen(req, timeout=240) as resp:
+            with urllib.request.urlopen(req, timeout=300) as resp:
                 return json.loads(resp.read().decode("utf-8"))
         except urllib.error.HTTPError as e:
-            # 에러 본문 읽기 (원인 파악용)
+            body = ""
             try:
-                err_body = e.read().decode("utf-8")
-                err_json = json.loads(err_body)
-                err_msg = err_json.get("error", {}).get("message", err_body[:300])
+                body = json.loads(e.read().decode("utf-8")).get("error", {}).get("message", "")
             except Exception:
-                err_msg = str(e)
-
+                pass
             if e.code == 429:
                 wait = 60 * (attempt + 1)
-                print(f"  ⚠ 429 Rate limit (시도 {attempt+1}/{max_retries}) — {wait}초 대기...")
+                print(f"  ⚠ 429 Rate limit — {wait}초 대기 후 재시도...")
                 time.sleep(wait)
                 if attempt == max_retries - 1:
-                    raise urllib.error.HTTPError(
-                        e.url, e.code, f"429: {err_msg}", e.headers, None)
-            elif e.code == 400:
-                # 400은 재시도 없이 즉시 상세 오류 출력
-                raise urllib.error.HTTPError(
-                    e.url, e.code, f"400 Bad Request: {err_msg}", e.headers, None)
+                    raise RuntimeError(f"429: {body}")
             else:
-                raise urllib.error.HTTPError(
-                    e.url, e.code, f"HTTP {e.code}: {err_msg}", e.headers, None)
-
-
-def run_tool_loop(system, messages, tools=None, max_tokens=4000, max_loops=12):
-    """tool_use / server_tool_use 루프 실행 → 최종 text 반환"""
-    search_count = 0
-    for loop in range(max_loops):
-        payload = {
-            "model": "claude-sonnet-4-6",   # 최신 모델
-            "max_tokens": max_tokens,
-            "system": system,
-            "messages": messages
-        }
-        if tools:
-            payload["tools"] = tools
-
-        body   = api_request(payload)
-        stop   = body.get("stop_reason", "")
-        blocks = body.get("content", [])
-
-        # 검색 쿼리 로깅 (tool_use + server_tool_use 둘 다 처리)
-        for b in blocks:
-            btype = b.get("type", "")
-            bname = b.get("name", "")
-            if btype in ("tool_use", "server_tool_use") and bname == "web_search":
-                search_count += 1
-                query = b.get("input", {}).get("query", "")
-                print(f"    🔍 검색 {search_count}: {query}")
-
-        if stop == "end_turn":
-            text = "".join(b.get("text", "") for b in blocks if b.get("type") == "text")
-            return text, search_count
-
-        elif stop == "tool_use":
-            messages.append({"role": "assistant", "content": blocks})
-            # server_tool_use는 tool_result 불필요 (서버사이드 자동 처리)
-            # tool_use(일반)만 tool_result 전달
-            tool_results = [
-                {"type": "tool_result", "tool_use_id": b["id"], "content": ""}
-                for b in blocks if b.get("type") == "tool_use"
-            ]
-            if tool_results:
-                messages.append({"role": "user", "content": tool_results})
-            # server_tool_use만 있는 경우 — 다음 루프에서 자동 계속
-
-        elif stop == "max_tokens":
-            text = "".join(b.get("text", "") for b in blocks if b.get("type") == "text")
-            return text, search_count
-
-        else:
-            raise RuntimeError(f"Unexpected stop_reason: {stop}")
-
-    raise RuntimeError("max_loops exceeded")
+                raise RuntimeError(f"HTTP {e.code}: {body}")
+    raise RuntimeError("max_retries exceeded")
 
 
 def fix_and_parse(text):
-    """JSON 추출 + 파싱 (강화된 복구 로직)"""
+    """JSON 추출 + 파싱 + 자동 복구"""
     text = re.sub(r'```json\s*', '', text)
-    text = re.sub(r'```\s*', '', text)
-    text = text.strip()
-
-    s = text.find('{')
-    e = text.rfind('}')
+    text = re.sub(r'```\s*', '', text).strip()
+    s, e = text.find('{'), text.rfind('}')
     if s == -1 or e == -1:
         return None
     text = text[s:e+1]
 
-    # 문자열 내 줄바꿈·탭·제어문자 제거
+    # 문자열 내 줄바꿈·제어문자 제거
     out, in_str, esc = [], False, False
     for ch in text:
         if esc:
@@ -308,33 +180,27 @@ def fix_and_parse(text):
             out.append(ch); esc = True
         elif ch == '"':
             in_str = not in_str; out.append(ch)
-        elif in_str and ch in '\n\r\t':
+        elif in_str and (ch in '\n\r\t' or ord(ch) < 32):
             out.append(' ')
-        elif in_str and ord(ch) < 32:
-            pass  # 기타 제어문자 제거
         else:
             out.append(ch)
 
     fixed = ''.join(out)
-
-    # 1차 시도
     try:
         return json.loads(fixed)
-    except json.JSONDecodeError as err:
-        print(f"  1차 파싱 오류: {err}")
-
-    # 2차 시도: 잘린 JSON 복구 (끝부분 누락 시 닫는 괄호 추가)
-    try:
-        # 열린 { 개수와 닫힌 } 개수 맞추기
-        opens  = fixed.count('{') - fixed.count('}')
-        closes = fixed.count('[') - fixed.count(']')
-        repaired = fixed + (']' * max(0, closes)) + ('}' * max(0, opens))
-        result = json.loads(repaired)
-        print(f"  2차 복구 성공 (괄호 {opens}개 추가)")
-        return result
-    except json.JSONDecodeError as err2:
-        print(f"  2차 복구 실패: {err2}")
-        return None
+    except json.JSONDecodeError as err1:
+        print(f"  1차 파싱 실패: {err1}")
+        # 괄호 복구 시도
+        try:
+            opens  = fixed.count('{') - fixed.count('}')
+            closes = fixed.count('[') - fixed.count(']')
+            repaired = fixed + (']' * max(0, closes)) + ('}' * max(0, opens))
+            result = json.loads(repaired)
+            print(f"  괄호 복구 성공")
+            return result
+        except json.JSONDecodeError as err2:
+            print(f"  2차 복구 실패: {err2}")
+            return None
 
 
 def make_error(msg, period=None):
@@ -354,56 +220,54 @@ def make_error(msg, period=None):
 
 
 # ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-# 메인 2단계 파이프라인
+# 2단계 파이프라인
 # ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 def generate_topic(topic_id, topic_data):
-    print(f"\n{'='*50}")
     period = PERIODS[topic_id]
-    print(f"▶ [{topic_id}] {topic_data['label']} 분석 시작  |  집계 기간: {period}")
-    print(f"{'='*50}")
+    print(f"\n{'='*52}")
+    print(f"▶ [{topic_id}] {topic_data['label']}  |  {period}")
+    print(f"{'='*52}")
 
-    # ── 1단계: 검색 + 분석 리포트 ──────────────────
-    print("  [1단계] 웹 검색 + 분석 리포트 작성...")
-
-    report_text, search_count = "", 0
-    for stage1_attempt in range(2):
+    # ── 1단계: web_search 포함 단일 호출 ────────────
+    # web_search 툴은 단일 호출에서 자동으로 다중 검색 수행
+    print("  [1단계] 검색 + 분석 리포트 작성...")
+    report_text = ""
+    for attempt in range(2):
         try:
-            report_text, search_count = run_tool_loop(
-                system=SYSTEM_STAGE1,
-                messages=[{"role": "user", "content": topic_data['stage1_instruction']}],
-                tools=[WEB_SEARCH_TOOL],
-                max_tokens=4000,
-                max_loops=12
+            body = call_api({
+                "model": "claude-sonnet-4-6",
+                "max_tokens": 4000,
+                "system": SYSTEM_STAGE1,
+                "tools": [WEB_SEARCH_TOOL],
+                "messages": [{"role": "user", "content": topic_data['prompt']}]
+            })
+            # web_search는 end_turn으로 완료, content에서 text 추출
+            report_text = "".join(
+                b.get("text", "") for b in body.get("content", [])
+                if b.get("type") == "text"
             )
-        except Exception as e:
-            print(f"  ✗ 1단계 오류 (시도 {stage1_attempt+1}): {e}")
-            if stage1_attempt == 1:
-                return make_error(f"stage1: {e}", period)
-            time.sleep(40)
-            continue
-
-        if search_count == 0 or not report_text.strip():
-            print(f"  ⚠ 검색 {search_count}회, 리포트 {len(report_text)}자 — 재시도...")
-            time.sleep(20)
-            continue
-        break
-
-    print(f"  ✓ 1단계 완료 — 검색 {search_count}회, 리포트 {len(report_text)}자")
+            if report_text.strip():
+                print(f"  ✓ 리포트 {len(report_text)}자 생성")
+                break
+            else:
+                print(f"  ⚠ 빈 응답 (시도 {attempt+1})")
+        except RuntimeError as e:
+            print(f"  ✗ 1단계 오류 (시도 {attempt+1}): {e}")
+            if attempt == 1:
+                return make_error(str(e), period)
+            time.sleep(30)
 
     if not report_text.strip():
-        return make_error("stage1_empty_report", period)
+        return make_error("empty_report", period)
 
-    # ── 2단계: 리포트 → JSON 구조화 ─────────────
+    # ── 2단계: JSON 구조화 (검색 없이 순수 변환) ────
     print("  [2단계] JSON 구조화 중...")
-
-    schema = topic_data['json_schema'].replace("PERIOD", period)
-
-    # 리포트가 너무 길면 앞 3000자만 전달 (2단계 컨텍스트 초과 방지)
+    schema = topic_data['schema'].replace("PERIOD", period)
     report_trimmed = report_text[:3000] if len(report_text) > 3000 else report_text
 
-    stage2_prompt = f"""한화첨단소재 시장 인텔리전스 분석 리포트를 JSON으로 변환하세요.
+    prompt2 = f"""한화첨단소재 인텔리전스 리포트를 JSON으로 변환하세요.
 analysis_period: "{period}"
-리포트의 수치·회사명·사실을 최대한 반영하세요. 완전한 JSON만 출력하세요.
+리포트의 수치·회사명·사실을 JSON에 반영하세요. 완전한 JSON만 출력하세요.
 
 === 리포트 ===
 {report_trimmed}
@@ -412,41 +276,41 @@ analysis_period: "{period}"
 JSON 스키마:
 {schema}"""
 
-    # 2단계는 최대 2회 재시도
     result = None
     for attempt in range(2):
         try:
-            json_text, _ = run_tool_loop(
-                system=SYSTEM_STAGE2,
-                messages=[{"role": "user", "content": stage2_prompt}],
-                tools=None,
-                max_tokens=7000,   # 6000 → 7000으로 증가
-                max_loops=3
+            body = call_api({
+                "model": "claude-sonnet-4-6",
+                "max_tokens": 6000,
+                "system": SYSTEM_STAGE2,
+                "messages": [{"role": "user", "content": prompt2}]
+                # tools 없음 — 순수 JSON 생성만
+            })
+            json_text = "".join(
+                b.get("text", "") for b in body.get("content", [])
+                if b.get("type") == "text"
             )
-        except Exception as e:
+        except RuntimeError as e:
             print(f"  ✗ 2단계 오류 (시도 {attempt+1}): {e}")
             if attempt == 1:
-                return make_error(f"stage2: {e}", period)
-            time.sleep(30)
+                return make_error(str(e), period)
+            time.sleep(20)
             continue
 
         result = fix_and_parse(json_text)
         if result:
             break
-        print(f"  ⚠ 2단계 파싱 실패 (시도 {attempt+1}), 원문: {json_text[:200]}")
+        print(f"  ⚠ 파싱 실패 (시도 {attempt+1}), 앞부분: {json_text[:150]}")
         if attempt == 0:
-            print("  재시도 중...")
-            time.sleep(15)
+            time.sleep(10)
 
     if not result:
-        return make_error("stage2_parse_failed", period)
+        return make_error("parse_failed", period)
 
-    result["generated_at"]   = TIMESTAMP
-    result["search_powered"] = True
-    result["search_count"]   = search_count
-    # 혹시 Claude가 analysis_period를 바꿔놓았을 경우 강제 보정
-    result["analysis_period"] = period
-    print(f"  ✓ 완료 — sections {len(result.get('sections',[]))}개  |  기간: {period}")
+    result["generated_at"]    = TIMESTAMP
+    result["search_powered"]  = True
+    result["analysis_period"] = period  # 강제 보정
+    print(f"  ✓ 완료 — sections {len(result.get('sections', []))}개")
     return result
 
 
@@ -457,15 +321,14 @@ os.makedirs("data", exist_ok=True)
 
 items = list(TOPICS.items())
 for i, (topic_id, topic_data) in enumerate(items):
-    result    = generate_topic(topic_id, topic_data)
-    out_path  = f"data/{topic_id}.json"
+    result   = generate_topic(topic_id, topic_data)
+    out_path = f"data/{topic_id}.json"
     with open(out_path, "w", encoding="utf-8") as f:
         json.dump(result, f, ensure_ascii=False, indent=2)
     print(f"  ✓ {out_path} 저장")
 
     if i < len(items) - 1:
-        wait = 90   # 토큰 사용량 증가로 넉넉하게 대기
-        print(f"  ⏳ {wait}초 대기 (rate limit 방지)...")
-        time.sleep(wait)
+        print(f"  ⏳ 60초 대기...")
+        time.sleep(60)
 
 print("\n✅ 전체 완료")
