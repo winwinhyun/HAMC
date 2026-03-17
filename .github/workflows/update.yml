@@ -12,35 +12,55 @@ jobs:
       contents: write
 
     steps:
-      - name: Checkout
+      - name: Checkout main
         uses: actions/checkout@v4
+        with:
+          ref: main
 
       - name: Set up Python
         uses: actions/setup-python@v5
         with:
           python-version: '3.11'
 
+      # ── 1. JSON 생성 (main 브랜치 작업 디렉터리에서) ──
       - name: Generate analysis JSON files
         env:
           ANTHROPIC_API_KEY: ${{ secrets.ANTHROPIC_API_KEY }}
         run: python generate.py
 
-      - name: Inject API key into index.html
+      # ── 2. gh-pages 브랜치 체크아웃 (별도 디렉터리) ──
+      - name: Checkout gh-pages branch
+        uses: actions/checkout@v4
+        with:
+          ref: gh-pages
+          path: gh-pages-dir
+
+      # ── 3. 생성된 data/ 파일을 gh-pages-dir로 복사 ──
+      - name: Copy data to gh-pages
+        run: |
+          cp -r data/. gh-pages-dir/data/
+
+      # ── 4. API 키 주입된 index.html을 gh-pages-dir에만 생성 ──
+      #       main 브랜치에는 절대 커밋하지 않음
+      - name: Inject API key → gh-pages only
         env:
           ANTHROPIC_API_KEY: ${{ secrets.ANTHROPIC_API_KEY }}
         run: |
-          # 플레이스홀더를 실제 API 키로 치환 (배포용 파일에만 적용)
-          sed "s|__ANTHROPIC_API_KEY__|${ANTHROPIC_API_KEY}|g" index.html > index_deploy.html
-          mv index_deploy.html index.html
+          sed "s|__ANTHROPIC_API_KEY__|${ANTHROPIC_API_KEY}|g" \
+            index.html > gh-pages-dir/index.html
 
-      - name: Commit and push
+      # ── 5. gh-pages 브랜치에만 커밋·푸시 ──
+      - name: Commit and push to gh-pages
         run: |
+          cd gh-pages-dir
           git config user.name  "github-actions[bot]"
           git config user.email "github-actions[bot]@users.noreply.github.com"
           git add data/ index.html
-          git diff --staged --quiet || git commit -m "chore: update intelligence data $(date +'%Y-%m-%d %H:%M KST')"
-          git push
+          git diff --staged --quiet || \
+            git commit -m "deploy: update intelligence data $(date +'%Y-%m-%d %H:%M KST')"
+          git push origin gh-pages
 
+      # ── 6. 이메일 발송 ──
       - name: Send email (scheduled — all recipients)
         if: github.event_name == 'schedule'
         env:
