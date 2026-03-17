@@ -607,7 +607,12 @@ async function runCustom() {
   // PAT가 주입됐는지 확인
   if (!GH_PAT || GH_PAT === "") {
     loadEl.classList.remove("show");
-    showError("직접 질문 기능을 사용하려면 GitHub Secret 'GH_PAT'를 설정해주세요.");
+    document.getElementById("error-box").innerHTML = `
+      ⚙️ <strong>직접 질문 기능 설정이 필요합니다.</strong><br>
+      GitHub 저장소 → Settings → Secrets → <code>GH_PAT</code> 를 등록한 후 Actions를 한 번 실행해주세요.<br>
+      <span style="font-size:11px;color:var(--ink4)">PAT 발급: GitHub → Settings → Developer Settings → Personal Access Tokens (repo 권한 필요)</span>
+    `;
+    document.getElementById("error-box").classList.add("show");
     document.getElementById("btn-custom-run").disabled = false;
     return;
   }
@@ -773,7 +778,7 @@ const ALL_PRODUCTS = [
   { key:"BuffLite (EPP)",      short:"BuffLite",    desc:"범퍼 흡수재·차음재" },
   { key:"IntermLite (PMC)",    short:"IntermLite",  desc:"내장재 표피재" },
   { key:"SMC",                 short:"SMC",         desc:"외장패널·배터리케이스" },
-  { key:"Encapsulant (EVA/POE)",short:"Encapsulant",desc:"태양광 모듈용 시트" },
+  { key:"Encapsulant (EVA/POE)",short:"태양광 소재", desc:"Encapsulant·Backsheet" },
 ];
 
 const IMPACT_LEVEL = {
