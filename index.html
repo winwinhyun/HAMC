@@ -87,17 +87,6 @@ body{font-family:'Pretendard','Apple SD Gothic Neo',sans-serif;color:var(--ink);
 #custom-toggle:hover{border-color:var(--orange2);color:var(--orange);background:var(--orange-bg)}
 #custom-area{display:none;margin-bottom:28px;gap:8px;flex-direction:column}
 #custom-area.open{display:flex}
-
-/* API KEY 설정 영역 */
-.api-key-row{display:flex;gap:8px;align-items:center}
-#api-key-input{flex:1;background:var(--white);border:1.5px solid var(--border);border-radius:10px;color:var(--ink);font-size:12px;font-family:'JetBrains Mono',monospace;padding:8px 12px;outline:none;transition:all .2s}
-#api-key-input:focus{border-color:var(--orange);box-shadow:0 0 0 3px rgba(232,84,26,.1)}
-.api-key-hint{font-size:11px;color:var(--ink4);margin-top:2px}
-.api-key-hint a{color:var(--blue);text-decoration:none}
-.api-key-hint a:hover{text-decoration:underline}
-#api-key-save-btn{background:var(--stone);border:1.5px solid var(--border);border-radius:8px;color:var(--ink3);padding:8px 14px;font-size:12px;font-family:'Pretendard',sans-serif;cursor:pointer;white-space:nowrap;transition:.2s}
-#api-key-save-btn:hover{background:var(--stone2)}
-
 .question-row{display:flex;gap:8px}
 #custom-input{flex:1;background:var(--white);border:1.5px solid var(--border);border-radius:10px;color:var(--ink);font-size:13px;font-family:'Pretendard',sans-serif;padding:10px 14px;resize:none;outline:none;transition:all .2s}
 #custom-input:focus{border-color:var(--orange);box-shadow:0 0 0 3px rgba(232,84,26,.1)}
@@ -277,16 +266,6 @@ body{font-family:'Pretendard','Apple SD Gothic Neo',sans-serif;color:var(--ink);
   <button id="custom-toggle" onclick="toggleCustom()">+ 직접 질문 입력하기</button>
 
   <div id="custom-area">
-    <!-- API Key 입력 행 (저장된 키 없을 때만 표시) -->
-    <div id="api-key-section" style="display:none">
-      <div class="api-key-row">
-        <input type="password" id="api-key-input" placeholder="Anthropic API Key (sk-ant-...)"/>
-        <button id="api-key-save-btn" onclick="saveApiKey()">저장</button>
-      </div>
-      <div class="api-key-hint">
-        API 키는 브라우저 로컬에만 저장됩니다. <a href="https://console.anthropic.com/settings/keys" target="_blank">키 발급 →</a>
-      </div>
-    </div>
     <div class="question-row">
       <textarea id="custom-input" rows="2" placeholder="예: 현대차 아이오닉9 출시가 한화첨단소재 경량소재 수요에 미치는 영향은?"></textarea>
       <div class="custom-btns">
@@ -375,34 +354,18 @@ body{font-family:'Pretendard','Apple SD Gothic Neo',sans-serif;color:var(--ink);
 
 <script>
 /* ════════════════════════════════════
-   API KEY 관리 (localStorage)
+   API KEY — GitHub Actions 빌드 시 주입
+   update.yml에서 __ANTHROPIC_API_KEY__를
+   실제 Secret으로 치환하여 배포
    ════════════════════════════════════ */
-const API_KEY_STORAGE = "hamc_api_key";
+const INJECTED_API_KEY = "__ANTHROPIC_API_KEY__";
 
 function getApiKey() {
-  return localStorage.getItem(API_KEY_STORAGE) || "";
-}
-
-function saveApiKey() {
-  const val = document.getElementById("api-key-input").value.trim();
-  if (!val.startsWith("sk-ant-")) {
-    showError("올바른 Anthropic API 키를 입력해주세요. (sk-ant- 로 시작)");
-    return;
+  // 빌드 시 주입된 키가 있으면 사용, 아니면 localStorage fallback
+  if (INJECTED_API_KEY && !INJECTED_API_KEY.startsWith("__")) {
+    return INJECTED_API_KEY;
   }
-  localStorage.setItem(API_KEY_STORAGE, val);
-  document.getElementById("api-key-section").style.display = "none";
-  document.getElementById("api-key-input").value = "";
-  showError("");
-}
-
-function checkApiKeySection() {
-  const key = getApiKey();
-  const section = document.getElementById("api-key-section");
-  if (!key) {
-    section.style.display = "block";
-  } else {
-    section.style.display = "none";
-  }
+  return localStorage.getItem("hamc_api_key") || "";
 }
 
 /* ════════════════════════════════════
@@ -537,7 +500,6 @@ function toggleCustom() {
   const open = a.classList.toggle("open");
   b.style.display = open ? "none" : "block";
   if (open) {
-    checkApiKeySection();
     document.getElementById("custom-input").focus();
   }
 }
@@ -549,11 +511,9 @@ async function runCustom() {
   const q = document.getElementById("custom-input").value.trim();
   if (!q) return;
 
-  // API 키 확인
   const apiKey = getApiKey();
-  if (!apiKey) {
-    checkApiKeySection();
-    showError("API 키를 먼저 입력하고 저장해주세요.");
+  if (!apiKey || apiKey.startsWith("__")) {
+    showError("서비스 준비 중입니다. 관리자에게 문의해주세요.");
     return;
   }
 
@@ -621,9 +581,7 @@ async function callClaude(prompt, apiKey) {
       errMsg = err.error?.message || errMsg;
     } catch(_) {}
     if (res.status === 401) {
-      // 잘못된 키 → localStorage에서 제거해서 다시 입력 유도
-      localStorage.removeItem(API_KEY_STORAGE);
-      throw new Error("API 키가 올바르지 않습니다. 다시 입력해주세요.");
+      throw new Error("API 인증 오류가 발생했습니다. 관리자에게 문의해주세요.");
     }
     if (res.status === 429) throw new Error("API 요청 한도를 초과했습니다. 잠시 후 다시 시도해주세요.");
     if (res.status === 403) throw new Error("API 키 권한이 없습니다. 키를 확인해주세요.");
