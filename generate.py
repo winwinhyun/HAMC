@@ -205,19 +205,32 @@ Write a comprehensive analysis report as instructed.""",
 # ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 # 공통 유틸
 # ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-def api_request(payload):
+def api_request(payload, max_retries=4):
+    """429 Too Many Requests 시 지수 백오프로 재시도"""
     data = json.dumps(payload).encode("utf-8")
-    req  = urllib.request.Request(
-        "https://api.anthropic.com/v1/messages",
-        data=data,
-        headers={
-            "x-api-key": API_KEY,
-            "anthropic-version": "2023-06-01",
-            "content-type": "application/json"
-        }
-    )
-    with urllib.request.urlopen(req, timeout=240) as resp:
-        return json.loads(resp.read().decode("utf-8"))
+    for attempt in range(max_retries):
+        req = urllib.request.Request(
+            "https://api.anthropic.com/v1/messages",
+            data=data,
+            headers={
+                "x-api-key": API_KEY,
+                "anthropic-version": "2023-06-01",
+                "content-type": "application/json"
+            }
+        )
+        try:
+            with urllib.request.urlopen(req, timeout=240) as resp:
+                return json.loads(resp.read().decode("utf-8"))
+        except urllib.error.HTTPError as e:
+            if e.code == 429:
+                # 지수 백오프: 60s → 120s → 180s → 240s
+                wait = 60 * (attempt + 1)
+                print(f"  ⚠ 429 Rate limit (시도 {attempt+1}/{max_retries}) — {wait}초 대기...")
+                time.sleep(wait)
+                if attempt == max_retries - 1:
+                    raise
+            else:
+                raise
 
 
 def run_tool_loop(system, messages, tools=None, max_tokens=8000, max_loops=12):
@@ -402,8 +415,8 @@ for i, (topic_id, topic_data) in enumerate(items):
     print(f"  ✓ {out_path} 저장")
 
     if i < len(items) - 1:
-        wait = 25
-        print(f"  ⏳ {wait}초 대기 (rate limit)...")
+        wait = 60
+        print(f"  ⏳ {wait}초 대기 (rate limit 방지)...")
         time.sleep(wait)
 
 print("\n✅ 전체 완료")
