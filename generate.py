@@ -62,7 +62,7 @@ Annual revenue: KRW 1.2308 trillion (2024). Overseas revenue ratio: 61%. 8 overs
 WEB_SEARCH_TOOL = {
     "type": "web_search_20250305",
     "name": "web_search",
-    "max_uses": 8   # 1단계에서 충분히 검색
+    "max_uses": 5   # 토큰·시간 절약
 }
 
 # ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
@@ -71,30 +71,18 @@ WEB_SEARCH_TOOL = {
 SYSTEM_STAGE1 = f"""You are a senior market intelligence analyst for Hanwha Advanced Materials.
 {PRODUCT_CONTEXT}
 
-YOUR TASK:
-1. Use web_search to gather REAL, RECENT news from the past 30 days.
-2. Search comprehensively — search at least 5-6 times covering different angles.
-3. After all searches, write a detailed FREE-FORM analysis report in Korean.
+INSTRUCTIONS:
+- Use web_search tool 4-5 times to gather recent news (past 30 days).
+- After searching, write a concise analysis report in Korean.
 
-REPORT FORMAT (free-form, write in Korean):
-- 분석 기간: {SEARCH_PERIOD}
-- Executive Summary (3-4 sentences with specific facts/numbers found)
-- 주요 발견사항 (at least 6 detailed findings, each 3-5 sentences):
-  * Each finding must cite specific company names, numbers, dates from actual search results
-  * Include implications for Hanwha Advanced Materials products
-- 경쟁사 동향 (3-4 paragraphs on competitor moves)
-- 중단기 사업 전망:
-  * 단기 (6개월): specific outlook based on found data
-  * 중기 (2년): trend projection
-  * 장기 (5년): strategic outlook
-- 액션 아이템:
-  * 영업팀: concrete sales actions
-  * R&D팀: specific research directions
-  * 경영진: strategic decisions needed
-- 검색한 주요 출처 목록
+REPORT FORMAT (Korean, keep it focused — max 1500 words):
+1. Executive Summary (2-3 sentences with key facts/numbers)
+2. 주요 발견사항 (5-6 findings, each 2-3 sentences with specific facts)
+3. 경쟁사 동향 (2-3 paragraphs)
+4. 전망 및 액션 아이템 (단기/중기/장기 + 영업팀/R&D팀/경영진)
+5. 주요 출처
 
-DO NOT write JSON. Write a rich, detailed analytical report.
-The more specific facts, numbers, and company names from search results, the better."""
+IMPORTANT: Keep the report concise. Do NOT write JSON."""
 
 # ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 # 2단계 시스템 프롬프트 — JSON 구조화 전용
@@ -233,8 +221,10 @@ def api_request(payload, max_retries=4):
                 raise
 
 
-def run_tool_loop(system, messages, tools=None, max_tokens=8000, max_loops=12):
-    """tool_use 루프 실행 → 최종 text 반환"""
+def run_tool_loop(system, messages, tools=None, max_tokens=8000, max_loops=12, force_search=False):
+    """tool_use 루프 실행 → 최종 text 반환
+    force_search=True: 첫 호출에서 web_search를 강제 실행
+    """
     search_count = 0
     for loop in range(max_loops):
         payload = {
@@ -245,6 +235,9 @@ def run_tool_loop(system, messages, tools=None, max_tokens=8000, max_loops=12):
         }
         if tools:
             payload["tools"] = tools
+            # 첫 루프에서 검색 강제 (검색 0회 방지)
+            if force_search and loop == 0 and search_count == 0:
+                payload["tool_choice"] = {"type": "tool", "name": "web_search"}
 
         body    = api_request(payload)
         stop    = body.get("stop_reason", "")
@@ -352,19 +345,32 @@ def generate_topic(topic_id, topic_data):
     print(f"▶ [{topic_id}] {topic_data['label']} 분석 시작  |  집계 기간: {period}")
     print(f"{'='*50}")
 
-    # ── 1단계: 검색 + 자유 형식 심층 분석 ──────────
-    print("  [1단계] 웹 검색 + 심층 분석 리포트 작성...")
-    try:
-        report_text, search_count = run_tool_loop(
-            system=SYSTEM_STAGE1,
-            messages=[{"role": "user", "content": topic_data['stage1_instruction']}],
-            tools=[WEB_SEARCH_TOOL],
-            max_tokens=8000,
-            max_loops=15
-        )
-    except Exception as e:
-        print(f"  ✗ 1단계 오류: {e}")
-        return make_error(f"stage1: {e}", period)
+    # ── 1단계: 검색 + 분석 리포트 ──────────────────
+    print("  [1단계] 웹 검색 + 분석 리포트 작성...")
+
+    report_text, search_count = "", 0
+    for stage1_attempt in range(2):
+        try:
+            report_text, search_count = run_tool_loop(
+                system=SYSTEM_STAGE1,
+                messages=[{"role": "user", "content": topic_data['stage1_instruction']}],
+                tools=[WEB_SEARCH_TOOL],
+                max_tokens=4000,   # 8000 → 4000 (리포트 간소화)
+                max_loops=12,
+                force_search=True
+            )
+        except Exception as e:
+            print(f"  ✗ 1단계 오류 (시도 {stage1_attempt+1}): {e}")
+            if stage1_attempt == 1:
+                return make_error(f"stage1: {e}", period)
+            time.sleep(40)
+            continue
+
+        if search_count == 0 or not report_text.strip():
+            print(f"  ⚠ 검색 {search_count}회, 리포트 {len(report_text)}자 — 재시도...")
+            time.sleep(20)
+            continue
+        break
 
     print(f"  ✓ 1단계 완료 — 검색 {search_count}회, 리포트 {len(report_text)}자")
 
@@ -374,22 +380,18 @@ def generate_topic(topic_id, topic_data):
     # ── 2단계: 리포트 → JSON 구조화 ─────────────
     print("  [2단계] JSON 구조화 중...")
 
-    # 토픽별 실제 기간으로 PERIOD 치환
     schema = topic_data['json_schema'].replace("PERIOD", period)
 
-    stage2_prompt = f"""아래는 한화첨단소재 시장 인텔리전스 분석 리포트입니다.
-이 리포트의 내용을 바탕으로 JSON을 생성하세요.
-리포트에 있는 구체적인 수치, 회사명, 날짜, 사실을 최대한 JSON에 반영하세요.
-analysis_period는 반드시 "{period}" 로 설정하세요.
+    # 리포트가 너무 길면 앞 3000자만 전달 (2단계 컨텍스트 초과 방지)
+    report_trimmed = report_text[:3000] if len(report_text) > 3000 else report_text
 
-=== 분석 리포트 ===
-{report_text}
-===================
+    stage2_prompt = f"""한화첨단소재 시장 인텔리전스 분석 리포트를 JSON으로 변환하세요.
+analysis_period: "{period}"
+리포트의 수치·회사명·사실을 최대한 반영하세요. 완전한 JSON만 출력하세요.
 
-위 리포트를 아래 JSON 스키마에 맞게 변환하세요.
-각 sections의 content는 3-5문장으로 구체적 사실을 포함하세요.
-actions와 timeline도 리포트의 실제 내용을 기반으로 상세하게 작성하세요.
-반드시 완전한 JSON을 출력하세요. 중간에 잘리면 안 됩니다.
+=== 리포트 ===
+{report_trimmed}
+==============
 
 JSON 스키마:
 {schema}"""
@@ -446,7 +448,7 @@ for i, (topic_id, topic_data) in enumerate(items):
     print(f"  ✓ {out_path} 저장")
 
     if i < len(items) - 1:
-        wait = 60
+        wait = 90   # 토큰 사용량 증가로 넉넉하게 대기
         print(f"  ⏳ {wait}초 대기 (rate limit 방지)...")
         time.sleep(wait)
 
