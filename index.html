@@ -437,18 +437,23 @@ body{font-family:'Pretendard','Apple SD Gothic Neo',sans-serif;color:var(--ink);
 
 <script>
 /* ════════════════════════════════════
-   API KEY — GitHub Actions 빌드 시 주입
-   update.yml에서 __ANTHROPIC_API_KEY__를
-   실제 Secret으로 치환하여 배포
+   API KEY — data/config.json 에서 로드
+   Actions가 {"k":"sk-ant-..."} 형태로 저장
+   HTML/JS에 키가 노출되지 않음
    ════════════════════════════════════ */
-const INJECTED_API_KEY = "__ANTHROPIC_API_KEY__";
+let _cachedApiKey = "";
 
-function getApiKey() {
-  // 빌드 시 주입된 키가 있으면 사용, 아니면 localStorage fallback
-  if (INJECTED_API_KEY && !INJECTED_API_KEY.startsWith("__")) {
-    return INJECTED_API_KEY;
+async function getApiKey() {
+  if (_cachedApiKey) return _cachedApiKey;
+  try {
+    const res = await fetch(`data/config.json?t=${Date.now()}`);
+    if (!res.ok) throw new Error("config not found");
+    const cfg = await res.json();
+    _cachedApiKey = cfg.k || "";
+    return _cachedApiKey;
+  } catch(_) {
+    return "";
   }
-  return localStorage.getItem("hamc_api_key") || "";
 }
 
 /* ════════════════════════════════════
@@ -594,9 +599,9 @@ async function runCustom() {
   const q = document.getElementById("custom-input").value.trim();
   if (!q) return;
 
-  const apiKey = getApiKey();
-  if (!apiKey || apiKey.startsWith("__")) {
-    showError("서비스 준비 중입니다. 관리자에게 문의해주세요.");
+  const apiKey = await getApiKey();
+  if (!apiKey) {
+    showError("서비스 준비 중입니다. 잠시 후 다시 시도해주세요.");
     return;
   }
 
