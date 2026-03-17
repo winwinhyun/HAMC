@@ -1,34 +1,58 @@
-name: Intelligence Update & Notify
+name: Weekly Intelligence Update
 
 on:
   schedule:
-    - cron: '0 22 * * 0-4'   # 매주 월~금 오전 7시 KST (UTC 22:00 전날)
-  workflow_dispatch:
+    - cron: '0 22 * * 0-4'   # 월~금 오전 7시 KST (UTC 22:00)
+  workflow_dispatch:           # 수동 실행 가능
 
 jobs:
-  update-and-notify:
+  update:
     runs-on: ubuntu-latest
+    permissions:
+      contents: write
 
     steps:
       - name: Checkout
         uses: actions/checkout@v4
 
-      - name: Generate JSON files
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+
+      - name: Generate analysis JSON files
         env:
           ANTHROPIC_API_KEY: ${{ secrets.ANTHROPIC_API_KEY }}
-        run: python3 generate.py
+        run: python generate.py
 
-      - name: Commit & push
+      - name: Inject API key into index.html
+        env:
+          ANTHROPIC_API_KEY: ${{ secrets.ANTHROPIC_API_KEY }}
         run: |
-          git config user.name "github-actions[bot]"
+          # 플레이스홀더를 실제 API 키로 치환 (배포용 파일에만 적용)
+          sed "s|__ANTHROPIC_API_KEY__|${ANTHROPIC_API_KEY}|g" index.html > index_deploy.html
+          mv index_deploy.html index.html
+
+      - name: Commit and push
+        run: |
+          git config user.name  "github-actions[bot]"
           git config user.email "github-actions[bot]@users.noreply.github.com"
-          git add data/
-          git diff --cached --quiet || git commit -m "chore: auto update $(TZ='Asia/Seoul' date '+%Y-%m-%d %H:%M') KST"
+          git add data/ index.html
+          git diff --staged --quiet || git commit -m "chore: update intelligence data $(date +'%Y-%m-%d %H:%M KST')"
           git push
 
-      - name: Send email notification
+      - name: Send email (scheduled — all recipients)
+        if: github.event_name == 'schedule'
         env:
-          GMAIL_USER: ${{ secrets.GMAIL_USER }}
+          GMAIL_USER:         ${{ secrets.GMAIL_USER }}
           GMAIL_APP_PASSWORD: ${{ secrets.GMAIL_APP_PASSWORD }}
-          NOTIFY_EMAIL: ${{ github.event_name == 'workflow_dispatch' && secrets.NOTIFY_EMAIL_ME || secrets.NOTIFY_EMAIL }}
-        run: python3 send_mail.py
+          NOTIFY_EMAIL:       ${{ secrets.NOTIFY_EMAIL }}
+        run: python send_mail.py
+
+      - name: Send email (manual — self only)
+        if: github.event_name == 'workflow_dispatch'
+        env:
+          GMAIL_USER:         ${{ secrets.GMAIL_USER }}
+          GMAIL_APP_PASSWORD: ${{ secrets.GMAIL_APP_PASSWORD }}
+          NOTIFY_EMAIL:       ${{ secrets.NOTIFY_EMAIL_ME }}
+        run: python send_mail.py
