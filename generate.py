@@ -221,10 +221,8 @@ def api_request(payload, max_retries=4):
                 raise
 
 
-def run_tool_loop(system, messages, tools=None, max_tokens=8000, max_loops=12, force_search=False):
-    """tool_use 루프 실행 → 최종 text 반환
-    force_search=True: 첫 호출에서 web_search를 강제 실행
-    """
+def run_tool_loop(system, messages, tools=None, max_tokens=4000, max_loops=12):
+    """tool_use 루프 실행 → 최종 text 반환"""
     search_count = 0
     for loop in range(max_loops):
         payload = {
@@ -235,9 +233,6 @@ def run_tool_loop(system, messages, tools=None, max_tokens=8000, max_loops=12, f
         }
         if tools:
             payload["tools"] = tools
-            # 첫 루프에서 검색 강제 (검색 0회 방지)
-            if force_search and loop == 0 and search_count == 0:
-                payload["tool_choice"] = {"type": "tool", "name": "web_search"}
 
         body    = api_request(payload)
         stop    = body.get("stop_reason", "")
@@ -355,9 +350,8 @@ def generate_topic(topic_id, topic_data):
                 system=SYSTEM_STAGE1,
                 messages=[{"role": "user", "content": topic_data['stage1_instruction']}],
                 tools=[WEB_SEARCH_TOOL],
-                max_tokens=4000,   # 8000 → 4000 (리포트 간소화)
-                max_loops=12,
-                force_search=True
+                max_tokens=4000,
+                max_loops=12
             )
         except Exception as e:
             print(f"  ✗ 1단계 오류 (시도 {stage1_attempt+1}): {e}")
