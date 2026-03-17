@@ -86,7 +86,7 @@ jobs:
         run: |
           sed "s|__GH_PAT__|${GH_PAT}|g" index.html > gh-pages-dir/index.html
 
-      # ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+      # ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━ 
       # gh-pages에 커밋·푸시
       # ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
       - name: Commit and push to gh-pages
