@@ -22,10 +22,22 @@ DATE_ONLY   = now.strftime("%Y년 %m월 %d일")
 TIMESTAMP   = now.strftime("%Y년 %m월 %d일 %H시 %M분")
 
 today      = date.today()
-month_ago  = today - timedelta(days=30)
-SEARCH_PERIOD = (
-    f"{month_ago.strftime('%Y년 %m월 %d일')} ~ {today.strftime('%Y년 %m월 %d일')}"
-)
+
+def make_period(days):
+    start = today - timedelta(days=days)
+    return f"{start.strftime('%Y년 %m월 %d일')} ~ {today.strftime('%Y년 %m월 %d일')}"
+
+# 토픽별 집계 기간
+PERIODS = {
+    "weekly":    make_period(7),   # 주간 종합: 최근 7일
+    "ev":        make_period(30),  # EV/정책:   최근 30일
+    "oem":       make_period(30),  # OEM 동향:  최근 30일
+    "materials": make_period(60),  # 소재 기술: 최근 60일 (기술 발표 주기 고려)
+    "solar":     make_period(30),  # 태양광:    최근 30일
+}
+
+# 하위 호환용 (SYSTEM_STAGE1 템플릿에서 사용)
+SEARCH_PERIOD = make_period(30)
 
 # ── 제품 컨텍스트 (두 단계 공통) ──────────────────
 PRODUCT_CONTEXT = """
@@ -109,22 +121,23 @@ STRICT OUTPUT RULES:
 TOPICS = {
     "weekly": {
         "label": "주간 종합",
-        "stage1_instruction": f"""Today is {DATE_ONLY}. Analyze global automotive & EV industry trends for the past 30 days.
+        "stage1_instruction": f"""Today is {DATE_ONLY}. Analyze global automotive & EV industry trends for the past 7 days ({PERIODS['weekly']}).
+Focus ONLY on news from the last 7 days — this is a WEEKLY report.
 
 Search for these topics (search each separately for best coverage):
-1. Global EV sales data and market share changes this month
-2. Major OEM announcements — Hyundai/Kia, Toyota, BMW, GM, Tesla, BYD
-3. Automotive lightweight composite material demand trends
-4. US/EU/China automotive policy changes
-5. EV battery and platform technology news
-6. Automotive supply chain and raw material price trends
+1. Global EV sales data and market share changes this week
+2. Major OEM announcements this week — Hyundai/Kia, Toyota, BMW, GM, Tesla, BYD
+3. Automotive lightweight composite material demand trends this week
+4. US/EU/China automotive policy changes this week
+5. EV battery and platform technology news this week
+6. Automotive supply chain and raw material price trends this week
 
 Write a comprehensive analysis report as instructed.""",
         "json_schema": """{"summary":"[3-4 sentence Korean summary with specific facts/numbers]","impact_score":"HIGH","analysis_period":"PERIOD","accuracy_summary":{"overall_score":90,"has_ai_inference":false,"note":"[실제 검색 출처 나열]"},"data_sources":[{"name":"[source]","type":"market"},{"name":"[source]","type":"regulatory"},{"name":"[source]","type":"official"}],"sections":[{"title":"[제목]","content":"[3-5 sentence Korean content with specific facts]","tag":"EV동향","accuracy_level":"HIGH","source_type":"market"},{"title":"[제목]","content":"[content]","tag":"OEM동향","accuracy_level":"HIGH","source_type":"official"},{"title":"[제목]","content":"[content]","tag":"정책변화","accuracy_level":"HIGH","source_type":"regulatory"},{"title":"[제목]","content":"[content]","tag":"소재기술","accuracy_level":"HIGH","source_type":"market"},{"title":"[제목]","content":"[content]","tag":"경쟁사","accuracy_level":"MEDIUM","source_type":"market"},{"title":"[제목]","content":"[content]","tag":"수요예측","accuracy_level":"MEDIUM","source_type":"market"},{"title":"[제목]","content":"[content]","tag":"리스크","accuracy_level":"MEDIUM","source_type":"ai"},{"title":"[제목]","content":"[content]","tag":"친환경","accuracy_level":"MEDIUM","source_type":"market"}],"products_affected":["StrongLite (GMT)","SuperLite (LWRT)","SMC","BuffLite (EPP)"],"product_impact":{"StrongLite (GMT)":"HIGH","SuperLite (LWRT)":"HIGH","BuffLite (EPP)":"MEDIUM","IntermLite (PMC)":"LOW","SMC":"HIGH","Encapsulant (EVA/POE)":"NONE"},"actions":{"sales":"[3-4 sentence concrete sales actions in Korean]","rd":"[3-4 sentence specific R&D directions in Korean]","management":"[3-4 sentence strategic decisions in Korean]"},"timeline":{"short":"[4-5 sentence 6-month outlook in Korean with specific data]","mid":"[4-5 sentence 2-year outlook in Korean]","long":"[4-5 sentence 5-year outlook in Korean]"}}"""
     },
     "ev": {
         "label": "EV / 정책",
-        "stage1_instruction": f"""Today is {DATE_ONLY}. Analyze global EV market and policy landscape for the past 30 days.
+        "stage1_instruction": f"""Today is {DATE_ONLY}. Analyze global EV market and policy landscape for the past 30 days ({PERIODS['ev']}).
 
 Search for these topics separately:
 1. US IRA EV tax credits — latest updates, changes, beneficiary companies
@@ -139,7 +152,7 @@ Write a comprehensive analysis report as instructed.""",
     },
     "oem": {
         "label": "OEM 동향",
-        "stage1_instruction": f"""Today is {DATE_ONLY}. Analyze major OEM automotive developments for the past 30 days.
+        "stage1_instruction": f"""Today is {DATE_ONLY}. Analyze major OEM automotive developments for the past 30 days ({PERIODS['oem']}).
 
 Search for these topics separately:
 1. Hyundai/Kia — new EV models, production plans, material announcements
@@ -155,7 +168,8 @@ Write a comprehensive analysis report as instructed.""",
     },
     "materials": {
         "label": "소재 기술",
-        "stage1_instruction": f"""Today is {DATE_ONLY}. Analyze automotive lightweight composite material trends for the past 30 days.
+        "stage1_instruction": f"""Today is {DATE_ONLY}. Analyze automotive lightweight composite material trends for the past 60 days ({PERIODS['materials']}).
+Use 60-day window because technology announcements and R&D news have longer cycles.
 
 Search for these topics separately:
 1. CFRP carbon fiber composite material — market size, price, demand news
@@ -171,7 +185,7 @@ Write a comprehensive analysis report as instructed.""",
     },
     "solar": {
         "label": "태양광 소재",
-        "stage1_instruction": f"""Today is {DATE_ONLY}. Analyze solar PV materials market for the past 30 days.
+        "stage1_instruction": f"""Today is {DATE_ONLY}. Analyze solar PV materials market for the past 30 days ({PERIODS['solar']}).
 
 Search for these topics separately:
 1. Solar PV encapsulant EVA POE market — pricing, demand, capacity news
@@ -183,7 +197,7 @@ Search for these topics separately:
 7. Global solar installation forecast 2025 — key markets, growth rates
 
 Write a comprehensive analysis report as instructed.""",
-        "json_schema": """{"summary":"[3-4 sentence Korean summary with specific solar market facts/numbers]","impact_score":"HIGH","analysis_period":"PERIOD","accuracy_summary":{"overall_score":90,"has_ai_inference":false,"note":"[실제 검색 출처 나열]"},"data_sources":[{"name":"[source]","type":"market"},{"name":"[source]","type":"regulatory"},{"name":"[source]","type":"official"}],"sections":[{"title":"[제목]","content":"[3-5 sentence Korean content with specific solar market numbers]","tag":"태양광시장","accuracy_level":"HIGH","source_type":"market"},{"title":"[제목]","content":"[content]","tag":"정책변화","accuracy_level":"HIGH","source_type":"regulatory"},{"title":"[제목]","content":"[content about Hanwha Q CELLS or key customer]","tag":"OEM동향","accuracy_level":"HIGH","source_type":"official"},{"title":"[제목]","content":"[content]","tag":"경쟁사","accuracy_level":"HIGH","source_type":"market"},{"title":"[제목]","content":"[content]","tag":"태양광시장","accuracy_level":"MEDIUM","source_type":"market"},{"title":"[제목]","content":"[content]","tag":"소재기술","accuracy_level":"MEDIUM","source_type":"market"},{"title":"[제목]","content":"[content]","tag":"수요예측","accuracy_level":"MEDIUM","source_type":"ai"},{"title":"[제목]","content":"[content]","tag":"리스크","accuracy_level":"MEDIUM","source_type":"ai"}],"products_affected":["Encapsulant (EVA/POE)","Backsheet","태양광 소재 사업부"],"product_impact":{"StrongLite (GMT)":"HIGH","SuperLite (LWRT)":"HIGH","BuffLite (EPP)":"MEDIUM","IntermLite (PMC)":"LOW","SMC":"HIGH","Encapsulant (EVA/POE)":"NONE"},"actions":{"sales":"[3-4 sentence concrete solar sales actions]","rd":"[3-4 sentence solar material R&D directions]","management":"[3-4 sentence strategic solar business decisions]"},"timeline":{"short":"[4-5 sentence 6-month solar market outlook]","mid":"[4-5 sentence 2-year solar growth outlook]","long":"[4-5 sentence 5-year solar material technology outlook]"}}"""
+        "json_schema": """{"summary":"[3-4 sentence Korean summary with specific solar market facts/numbers]","impact_score":"HIGH","analysis_period":"PERIOD","accuracy_summary":{"overall_score":90,"has_ai_inference":false,"note":"[실제 검색 출처 나열]"},"data_sources":[{"name":"[source]","type":"market"},{"name":"[source]","type":"regulatory"},{"name":"[source]","type":"official"}],"sections":[{"title":"[제목]","content":"[3-5 sentence Korean content with specific solar market numbers]","tag":"태양광시장","accuracy_level":"HIGH","source_type":"market"},{"title":"[제목]","content":"[content]","tag":"정책변화","accuracy_level":"HIGH","source_type":"regulatory"},{"title":"[제목]","content":"[content about Hanwha Q CELLS or key customer]","tag":"OEM동향","accuracy_level":"HIGH","source_type":"official"},{"title":"[제목]","content":"[content]","tag":"경쟁사","accuracy_level":"HIGH","source_type":"market"},{"title":"[제목]","content":"[content]","tag":"태양광시장","accuracy_level":"MEDIUM","source_type":"market"},{"title":"[제목]","content":"[content]","tag":"소재기술","accuracy_level":"MEDIUM","source_type":"market"},{"title":"[제목]","content":"[content]","tag":"수요예측","accuracy_level":"MEDIUM","source_type":"ai"},{"title":"[제목]","content":"[content]","tag":"리스크","accuracy_level":"MEDIUM","source_type":"ai"}],"products_affected":["Encapsulant (EVA/POE)","Backsheet","태양광 소재 사업부"],"product_impact":{"StrongLite (GMT)":"NONE","SuperLite (LWRT)":"NONE","BuffLite (EPP)":"NONE","IntermLite (PMC)":"NONE","SMC":"LOW","Encapsulant (EVA/POE)":"HIGH"},"actions":{"sales":"[3-4 sentence concrete solar sales actions]","rd":"[3-4 sentence solar material R&D directions]","management":"[3-4 sentence strategic solar business decisions]"},"timeline":{"short":"[4-5 sentence 6-month solar market outlook]","mid":"[4-5 sentence 2-year solar growth outlook]","long":"[4-5 sentence 5-year solar material technology outlook]"}}"""
     }
 }
 
@@ -282,13 +296,13 @@ def fix_and_parse(text):
         return None
 
 
-def make_error(msg):
+def make_error(msg, period=None):
     return {
         "error": msg,
         "generated_at": TIMESTAMP,
         "summary": "분석 데이터 생성 실패 - 다음 갱신 시 자동 복구됩니다.",
         "impact_score": "MEDIUM",
-        "analysis_period": SEARCH_PERIOD,
+        "analysis_period": period or SEARCH_PERIOD,
         "accuracy_summary": {"overall_score": 0, "has_ai_inference": True, "note": "오류"},
         "data_sources": [],
         "sections": [],
@@ -303,7 +317,8 @@ def make_error(msg):
 # ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 def generate_topic(topic_id, topic_data):
     print(f"\n{'='*50}")
-    print(f"▶ [{topic_id}] {topic_data['label']} 분석 시작")
+    period = PERIODS[topic_id]
+    print(f"▶ [{topic_id}] {topic_data['label']} 분석 시작  |  집계 기간: {period}")
     print(f"{'='*50}")
 
     # ── 1단계: 검색 + 자유 형식 심층 분석 ──────────
@@ -318,21 +333,23 @@ def generate_topic(topic_id, topic_data):
         )
     except Exception as e:
         print(f"  ✗ 1단계 오류: {e}")
-        return make_error(f"stage1: {e}")
+        return make_error(f"stage1: {e}", period)
 
     print(f"  ✓ 1단계 완료 — 검색 {search_count}회, 리포트 {len(report_text)}자")
 
     if not report_text.strip():
-        return make_error("stage1_empty_report")
+        return make_error("stage1_empty_report", period)
 
     # ── 2단계: 리포트 → JSON 구조화 ─────────────
     print("  [2단계] JSON 구조화 중...")
 
-    schema = topic_data['json_schema'].replace("PERIOD", SEARCH_PERIOD)
+    # 토픽별 실제 기간으로 PERIOD 치환
+    schema = topic_data['json_schema'].replace("PERIOD", period)
 
     stage2_prompt = f"""아래는 한화첨단소재 시장 인텔리전스 분석 리포트입니다.
 이 리포트의 내용을 바탕으로 JSON을 생성하세요.
 리포트에 있는 구체적인 수치, 회사명, 날짜, 사실을 최대한 JSON에 반영하세요.
+analysis_period는 반드시 "{period}" 로 설정하세요.
 
 === 분석 리포트 ===
 {report_text}
@@ -349,23 +366,25 @@ JSON 스키마:
         json_text, _ = run_tool_loop(
             system=SYSTEM_STAGE2,
             messages=[{"role": "user", "content": stage2_prompt}],
-            tools=None,       # 2단계는 검색 없음 — 순수 구조화만
+            tools=None,
             max_tokens=6000,
             max_loops=3
         )
     except Exception as e:
         print(f"  ✗ 2단계 오류: {e}")
-        return make_error(f"stage2: {e}")
+        return make_error(f"stage2: {e}", period)
 
     result = fix_and_parse(json_text)
     if not result:
         print(f"  ⚠ 2단계 파싱 실패, 원문: {json_text[:300]}")
-        return make_error("stage2_parse_failed")
+        return make_error("stage2_parse_failed", period)
 
-    result["generated_at"]  = TIMESTAMP
+    result["generated_at"]   = TIMESTAMP
     result["search_powered"] = True
-    result["search_count"]  = search_count
-    print(f"  ✓ 완료 — sections {len(result.get('sections',[]))}개")
+    result["search_count"]   = search_count
+    # 혹시 Claude가 analysis_period를 바꿔놓았을 경우 강제 보정
+    result["analysis_period"] = period
+    print(f"  ✓ 완료 — sections {len(result.get('sections',[]))}개  |  기간: {period}")
     return result
 
 
