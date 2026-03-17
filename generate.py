@@ -278,7 +278,7 @@ def run_tool_loop(system, messages, tools=None, max_tokens=8000, max_loops=12):
 
 
 def fix_and_parse(text):
-    """JSON 추출 + 파싱"""
+    """JSON 추출 + 파싱 (강화된 복구 로직)"""
     text = re.sub(r'```json\s*', '', text)
     text = re.sub(r'```\s*', '', text)
     text = text.strip()
@@ -289,6 +289,7 @@ def fix_and_parse(text):
         return None
     text = text[s:e+1]
 
+    # 문자열 내 줄바꿈·탭·제어문자 제거
     out, in_str, esc = [], False, False
     for ch in text:
         if esc:
@@ -299,13 +300,30 @@ def fix_and_parse(text):
             in_str = not in_str; out.append(ch)
         elif in_str and ch in '\n\r\t':
             out.append(' ')
+        elif in_str and ord(ch) < 32:
+            pass  # 기타 제어문자 제거
         else:
             out.append(ch)
 
+    fixed = ''.join(out)
+
+    # 1차 시도
     try:
-        return json.loads(''.join(out))
-    except json.JSONDecodeError as e:
-        print(f"  파싱 오류: {e}")
+        return json.loads(fixed)
+    except json.JSONDecodeError as err:
+        print(f"  1차 파싱 오류: {err}")
+
+    # 2차 시도: 잘린 JSON 복구 (끝부분 누락 시 닫는 괄호 추가)
+    try:
+        # 열린 { 개수와 닫힌 } 개수 맞추기
+        opens  = fixed.count('{') - fixed.count('}')
+        closes = fixed.count('[') - fixed.count(']')
+        repaired = fixed + (']' * max(0, closes)) + ('}' * max(0, opens))
+        result = json.loads(repaired)
+        print(f"  2차 복구 성공 (괄호 {opens}개 추가)")
+        return result
+    except json.JSONDecodeError as err2:
+        print(f"  2차 복구 실패: {err2}")
         return None
 
 
@@ -371,25 +389,38 @@ analysis_period는 반드시 "{period}" 로 설정하세요.
 위 리포트를 아래 JSON 스키마에 맞게 변환하세요.
 각 sections의 content는 3-5문장으로 구체적 사실을 포함하세요.
 actions와 timeline도 리포트의 실제 내용을 기반으로 상세하게 작성하세요.
+반드시 완전한 JSON을 출력하세요. 중간에 잘리면 안 됩니다.
 
 JSON 스키마:
 {schema}"""
 
-    try:
-        json_text, _ = run_tool_loop(
-            system=SYSTEM_STAGE2,
-            messages=[{"role": "user", "content": stage2_prompt}],
-            tools=None,
-            max_tokens=6000,
-            max_loops=3
-        )
-    except Exception as e:
-        print(f"  ✗ 2단계 오류: {e}")
-        return make_error(f"stage2: {e}", period)
+    # 2단계는 최대 2회 재시도
+    result = None
+    for attempt in range(2):
+        try:
+            json_text, _ = run_tool_loop(
+                system=SYSTEM_STAGE2,
+                messages=[{"role": "user", "content": stage2_prompt}],
+                tools=None,
+                max_tokens=7000,   # 6000 → 7000으로 증가
+                max_loops=3
+            )
+        except Exception as e:
+            print(f"  ✗ 2단계 오류 (시도 {attempt+1}): {e}")
+            if attempt == 1:
+                return make_error(f"stage2: {e}", period)
+            time.sleep(30)
+            continue
 
-    result = fix_and_parse(json_text)
+        result = fix_and_parse(json_text)
+        if result:
+            break
+        print(f"  ⚠ 2단계 파싱 실패 (시도 {attempt+1}), 원문: {json_text[:200]}")
+        if attempt == 0:
+            print("  재시도 중...")
+            time.sleep(15)
+
     if not result:
-        print(f"  ⚠ 2단계 파싱 실패, 원문: {json_text[:300]}")
         return make_error("stage2_parse_failed", period)
 
     result["generated_at"]   = TIMESTAMP
