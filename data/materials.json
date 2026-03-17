@@ -1,0 +1,25 @@
+{
+  "error": "stage1: HTTP Error 429: Too Many Requests",
+  "generated_at": "2026년 03월 17일 12시 58분",
+  "summary": "분석 데이터 생성 실패 - 다음 갱신 시 자동 복구됩니다.",
+  "impact_score": "MEDIUM",
+  "analysis_period": "2026년 01월 16일 ~ 2026년 03월 17일",
+  "accuracy_summary": {
+    "overall_score": 0,
+    "has_ai_inference": true,
+    "note": "오류"
+  },
+  "data_sources": [],
+  "sections": [],
+  "products_affected": [],
+  "actions": {
+    "sales": "",
+    "rd": "",
+    "management": ""
+  },
+  "timeline": {
+    "short": "",
+    "mid": "",
+    "long": ""
+  }
+}
