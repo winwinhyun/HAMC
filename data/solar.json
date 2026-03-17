@@ -1,6 +1,6 @@
 {
   "error": "stage1: HTTP Error 400: Bad Request",
-  "generated_at": "2026년 03월 17일 15시 01분",
+  "generated_at": "2026년 03월 17일 15시 40분",
   "summary": "분석 데이터 생성 실패 - 다음 갱신 시 자동 복구됩니다.",
   "impact_score": "MEDIUM",
   "analysis_period": "2026년 02월 15일 ~ 2026년 03월 17일",
