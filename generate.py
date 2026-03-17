@@ -62,7 +62,7 @@ Annual revenue: KRW 1.2308 trillion (2024). Overseas revenue ratio: 61%. 8 overs
 WEB_SEARCH_TOOL = {
     "type": "web_search_20250305",
     "name": "web_search",
-    "max_uses": 5   # 토큰·시간 절약
+    "max_uses": 5
 }
 
 # ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
@@ -94,6 +94,7 @@ STRICT OUTPUT RULES:
 - NO newlines or tab characters inside any string value
 - Use "; " (semicolon + space) to separate sentences within a string
 - Preserve specific facts, numbers, company names, and dates from the report
+- summary must be 5-6 sentences (comprehensive overview with key facts and numbers)
 - sections must have exactly 8 items
 - Each section content must be 3-5 sentences (rich detail)
 - actions.sales / rd / management must be 3-4 sentences each (concrete, specific)
@@ -121,7 +122,7 @@ Search for these topics (search each separately for best coverage):
 6. Automotive supply chain and raw material price trends this week
 
 Write a comprehensive analysis report as instructed.""",
-        "json_schema": """{"summary":"[3-4 sentence Korean summary with specific facts/numbers]","impact_score":"HIGH","analysis_period":"PERIOD","accuracy_summary":{"overall_score":90,"has_ai_inference":false,"note":"[실제 검색 출처 나열]"},"data_sources":[{"name":"[source]","type":"market"},{"name":"[source]","type":"regulatory"},{"name":"[source]","type":"official"}],"sections":[{"title":"[제목]","content":"[3-5 sentence Korean content with specific facts]","tag":"EV동향","accuracy_level":"HIGH","source_type":"market"},{"title":"[제목]","content":"[content]","tag":"OEM동향","accuracy_level":"HIGH","source_type":"official"},{"title":"[제목]","content":"[content]","tag":"정책변화","accuracy_level":"HIGH","source_type":"regulatory"},{"title":"[제목]","content":"[content]","tag":"소재기술","accuracy_level":"HIGH","source_type":"market"},{"title":"[제목]","content":"[content]","tag":"경쟁사","accuracy_level":"MEDIUM","source_type":"market"},{"title":"[제목]","content":"[content]","tag":"수요예측","accuracy_level":"MEDIUM","source_type":"market"},{"title":"[제목]","content":"[content]","tag":"리스크","accuracy_level":"MEDIUM","source_type":"ai"},{"title":"[제목]","content":"[content]","tag":"친환경","accuracy_level":"MEDIUM","source_type":"market"}],"products_affected":["StrongLite (GMT)","SuperLite (LWRT)","SMC","BuffLite (EPP)"],"product_impact":{"StrongLite (GMT)":"HIGH","SuperLite (LWRT)":"HIGH","BuffLite (EPP)":"MEDIUM","IntermLite (PMC)":"LOW","SMC":"HIGH","Encapsulant (EVA/POE)":"NONE"},"actions":{"sales":"[3-4 sentence concrete sales actions in Korean]","rd":"[3-4 sentence specific R&D directions in Korean]","management":"[3-4 sentence strategic decisions in Korean]"},"timeline":{"short":"[4-5 sentence 6-month outlook in Korean with specific data]","mid":"[4-5 sentence 2-year outlook in Korean]","long":"[4-5 sentence 5-year outlook in Korean]"}}"""
+        "json_schema": """{"summary":"[5-6 sentence Korean summary with key facts, numbers, and business implications]","impact_score":"HIGH","analysis_period":"PERIOD","accuracy_summary":{"overall_score":90,"has_ai_inference":false,"note":"[실제 검색 출처 나열]"},"data_sources":[{"name":"[source]","type":"market"},{"name":"[source]","type":"regulatory"},{"name":"[source]","type":"official"}],"sections":[{"title":"[제목]","content":"[3-5 sentence Korean content with specific facts]","tag":"EV동향","accuracy_level":"HIGH","source_type":"market"},{"title":"[제목]","content":"[content]","tag":"OEM동향","accuracy_level":"HIGH","source_type":"official"},{"title":"[제목]","content":"[content]","tag":"정책변화","accuracy_level":"HIGH","source_type":"regulatory"},{"title":"[제목]","content":"[content]","tag":"소재기술","accuracy_level":"HIGH","source_type":"market"},{"title":"[제목]","content":"[content]","tag":"경쟁사","accuracy_level":"MEDIUM","source_type":"market"},{"title":"[제목]","content":"[content]","tag":"수요예측","accuracy_level":"MEDIUM","source_type":"market"},{"title":"[제목]","content":"[content]","tag":"리스크","accuracy_level":"MEDIUM","source_type":"ai"},{"title":"[제목]","content":"[content]","tag":"친환경","accuracy_level":"MEDIUM","source_type":"market"}],"products_affected":["StrongLite (GMT)","SuperLite (LWRT)","SMC","BuffLite (EPP)"],"product_impact":{"StrongLite (GMT)":"HIGH","SuperLite (LWRT)":"HIGH","BuffLite (EPP)":"MEDIUM","IntermLite (PMC)":"LOW","SMC":"HIGH","Encapsulant (EVA/POE)":"NONE"},"actions":{"sales":"[3-4 sentence concrete sales actions in Korean]","rd":"[3-4 sentence specific R&D directions in Korean]","management":"[3-4 sentence strategic decisions in Korean]"},"timeline":{"short":"[4-5 sentence 6-month outlook in Korean with specific data]","mid":"[4-5 sentence 2-year outlook in Korean]","long":"[4-5 sentence 5-year outlook in Korean]"}}"""
     },
     "ev": {
         "label": "EV / 정책",
@@ -136,7 +137,7 @@ Search for these topics separately:
 6. EV battery technology and cost reduction news
 
 Write a comprehensive analysis report as instructed.""",
-        "json_schema": """{"summary":"[3-4 sentence Korean summary with specific policy facts/numbers]","impact_score":"HIGH","analysis_period":"PERIOD","accuracy_summary":{"overall_score":92,"has_ai_inference":false,"note":"[실제 검색 출처 나열]"},"data_sources":[{"name":"[source]","type":"regulatory"},{"name":"[source]","type":"market"},{"name":"[source]","type":"official"}],"sections":[{"title":"[제목]","content":"[3-5 sentence Korean content with specific policy details/numbers]","tag":"EV동향","accuracy_level":"HIGH","source_type":"market"},{"title":"[제목]","content":"[content]","tag":"정책변화","accuracy_level":"HIGH","source_type":"regulatory"},{"title":"[제목]","content":"[content]","tag":"EV동향","accuracy_level":"HIGH","source_type":"market"},{"title":"[제목]","content":"[content]","tag":"정책변화","accuracy_level":"HIGH","source_type":"regulatory"},{"title":"[제목]","content":"[content]","tag":"수요예측","accuracy_level":"MEDIUM","source_type":"market"},{"title":"[제목]","content":"[content]","tag":"경쟁사","accuracy_level":"MEDIUM","source_type":"market"},{"title":"[제목]","content":"[content]","tag":"리스크","accuracy_level":"MEDIUM","source_type":"ai"},{"title":"[제목]","content":"[content]","tag":"친환경","accuracy_level":"MEDIUM","source_type":"regulatory"}],"products_affected":["StrongLite (GMT)","SuperLite (LWRT)","BuffLite (EPP)","SMC"],"product_impact":{"StrongLite (GMT)":"HIGH","SuperLite (LWRT)":"HIGH","BuffLite (EPP)":"MEDIUM","IntermLite (PMC)":"LOW","SMC":"HIGH","Encapsulant (EVA/POE)":"NONE"},"actions":{"sales":"[3-4 sentence concrete sales actions]","rd":"[3-4 sentence R&D directions]","management":"[3-4 sentence strategic decisions]"},"timeline":{"short":"[4-5 sentence 6-month outlook based on real policy data]","mid":"[4-5 sentence 2-year outlook]","long":"[4-5 sentence 5-year outlook]"}}"""
+        "json_schema": """{"summary":"[5-6 sentence Korean summary with key policy facts, numbers, and implications]","impact_score":"HIGH","analysis_period":"PERIOD","accuracy_summary":{"overall_score":92,"has_ai_inference":false,"note":"[실제 검색 출처 나열]"},"data_sources":[{"name":"[source]","type":"regulatory"},{"name":"[source]","type":"market"},{"name":"[source]","type":"official"}],"sections":[{"title":"[제목]","content":"[3-5 sentence Korean content with specific policy details/numbers]","tag":"EV동향","accuracy_level":"HIGH","source_type":"market"},{"title":"[제목]","content":"[content]","tag":"정책변화","accuracy_level":"HIGH","source_type":"regulatory"},{"title":"[제목]","content":"[content]","tag":"EV동향","accuracy_level":"HIGH","source_type":"market"},{"title":"[제목]","content":"[content]","tag":"정책변화","accuracy_level":"HIGH","source_type":"regulatory"},{"title":"[제목]","content":"[content]","tag":"수요예측","accuracy_level":"MEDIUM","source_type":"market"},{"title":"[제목]","content":"[content]","tag":"경쟁사","accuracy_level":"MEDIUM","source_type":"market"},{"title":"[제목]","content":"[content]","tag":"리스크","accuracy_level":"MEDIUM","source_type":"ai"},{"title":"[제목]","content":"[content]","tag":"친환경","accuracy_level":"MEDIUM","source_type":"regulatory"}],"products_affected":["StrongLite (GMT)","SuperLite (LWRT)","BuffLite (EPP)","SMC"],"product_impact":{"StrongLite (GMT)":"HIGH","SuperLite (LWRT)":"HIGH","BuffLite (EPP)":"MEDIUM","IntermLite (PMC)":"LOW","SMC":"HIGH","Encapsulant (EVA/POE)":"NONE"},"actions":{"sales":"[3-4 sentence concrete sales actions]","rd":"[3-4 sentence R&D directions]","management":"[3-4 sentence strategic decisions]"},"timeline":{"short":"[4-5 sentence 6-month outlook based on real policy data]","mid":"[4-5 sentence 2-year outlook]","long":"[4-5 sentence 5-year outlook]"}}"""
     },
     "oem": {
         "label": "OEM 동향",
@@ -152,7 +153,7 @@ Search for these topics separately:
 7. Automotive lightweight material adoption by OEMs
 
 Write a comprehensive analysis report as instructed.""",
-        "json_schema": """{"summary":"[3-4 sentence Korean summary with specific OEM names/models/facts]","impact_score":"HIGH","analysis_period":"PERIOD","accuracy_summary":{"overall_score":89,"has_ai_inference":false,"note":"[실제 검색 출처 나열]"},"data_sources":[{"name":"[source]","type":"official"},{"name":"[source]","type":"market"},{"name":"[source]","type":"market"}],"sections":[{"title":"[제목]","content":"[3-5 sentence Korean content with specific model names and facts]","tag":"OEM동향","accuracy_level":"HIGH","source_type":"official"},{"title":"[제목]","content":"[content]","tag":"OEM동향","accuracy_level":"HIGH","source_type":"official"},{"title":"[제목]","content":"[content]","tag":"OEM동향","accuracy_level":"HIGH","source_type":"market"},{"title":"[제목]","content":"[content]","tag":"EV동향","accuracy_level":"HIGH","source_type":"market"},{"title":"[제목]","content":"[content]","tag":"소재기술","accuracy_level":"MEDIUM","source_type":"market"},{"title":"[제목]","content":"[content]","tag":"수요예측","accuracy_level":"MEDIUM","source_type":"ai"},{"title":"[제목]","content":"[content]","tag":"경쟁사","accuracy_level":"MEDIUM","source_type":"ai"},{"title":"[제목]","content":"[content]","tag":"리스크","accuracy_level":"MEDIUM","source_type":"ai"}],"products_affected":["StrongLite (GMT)","SuperLite (LWRT)","IntermLite (PMC)","SMC","BuffLite (EPP)"],"product_impact":{"StrongLite (GMT)":"HIGH","SuperLite (LWRT)":"HIGH","BuffLite (EPP)":"MEDIUM","IntermLite (PMC)":"LOW","SMC":"HIGH","Encapsulant (EVA/POE)":"NONE"},"actions":{"sales":"[3-4 sentence concrete OEM-specific sales actions]","rd":"[3-4 sentence R&D directions based on OEM needs]","management":"[3-4 sentence strategic partnership decisions]"},"timeline":{"short":"[4-5 sentence 6-month outlook by OEM]","mid":"[4-5 sentence 2-year platform transition outlook]","long":"[4-5 sentence 5-year OEM landscape outlook]"}}"""
+        "json_schema": """{"summary":"[5-6 sentence Korean summary with key OEM news, model names, and business impact]","impact_score":"HIGH","analysis_period":"PERIOD","accuracy_summary":{"overall_score":89,"has_ai_inference":false,"note":"[실제 검색 출처 나열]"},"data_sources":[{"name":"[source]","type":"official"},{"name":"[source]","type":"market"},{"name":"[source]","type":"market"}],"sections":[{"title":"[제목]","content":"[3-5 sentence Korean content with specific model names and facts]","tag":"OEM동향","accuracy_level":"HIGH","source_type":"official"},{"title":"[제목]","content":"[content]","tag":"OEM동향","accuracy_level":"HIGH","source_type":"official"},{"title":"[제목]","content":"[content]","tag":"OEM동향","accuracy_level":"HIGH","source_type":"market"},{"title":"[제목]","content":"[content]","tag":"EV동향","accuracy_level":"HIGH","source_type":"market"},{"title":"[제목]","content":"[content]","tag":"소재기술","accuracy_level":"MEDIUM","source_type":"market"},{"title":"[제목]","content":"[content]","tag":"수요예측","accuracy_level":"MEDIUM","source_type":"ai"},{"title":"[제목]","content":"[content]","tag":"경쟁사","accuracy_level":"MEDIUM","source_type":"ai"},{"title":"[제목]","content":"[content]","tag":"리스크","accuracy_level":"MEDIUM","source_type":"ai"}],"products_affected":["StrongLite (GMT)","SuperLite (LWRT)","IntermLite (PMC)","SMC","BuffLite (EPP)"],"product_impact":{"StrongLite (GMT)":"HIGH","SuperLite (LWRT)":"HIGH","BuffLite (EPP)":"MEDIUM","IntermLite (PMC)":"LOW","SMC":"HIGH","Encapsulant (EVA/POE)":"NONE"},"actions":{"sales":"[3-4 sentence concrete OEM-specific sales actions]","rd":"[3-4 sentence R&D directions based on OEM needs]","management":"[3-4 sentence strategic partnership decisions]"},"timeline":{"short":"[4-5 sentence 6-month outlook by OEM]","mid":"[4-5 sentence 2-year platform transition outlook]","long":"[4-5 sentence 5-year OEM landscape outlook]"}}"""
     },
     "materials": {
         "label": "소재 기술",
@@ -169,7 +170,7 @@ Search for these topics separately:
 7. Recycled composite materials — sustainability regulations, GRS certification trends
 
 Write a comprehensive analysis report as instructed.""",
-        "json_schema": """{"summary":"[3-4 sentence Korean summary with specific material technology facts]","impact_score":"MEDIUM","analysis_period":"PERIOD","accuracy_summary":{"overall_score":86,"has_ai_inference":false,"note":"[실제 검색 출처 나열]"},"data_sources":[{"name":"[source]","type":"market"},{"name":"[source]","type":"market"},{"name":"[source]","type":"official"}],"sections":[{"title":"[제목]","content":"[3-5 sentence Korean content with specific technology facts]","tag":"소재기술","accuracy_level":"HIGH","source_type":"market"},{"title":"[제목]","content":"[content about specific competitor]","tag":"경쟁사","accuracy_level":"HIGH","source_type":"market"},{"title":"[제목]","content":"[content about another competitor]","tag":"경쟁사","accuracy_level":"HIGH","source_type":"market"},{"title":"[제목]","content":"[content]","tag":"소재기술","accuracy_level":"HIGH","source_type":"market"},{"title":"[제목]","content":"[content]","tag":"친환경","accuracy_level":"MEDIUM","source_type":"regulatory"},{"title":"[제목]","content":"[content]","tag":"수요예측","accuracy_level":"MEDIUM","source_type":"market"},{"title":"[제목]","content":"[content]","tag":"리스크","accuracy_level":"MEDIUM","source_type":"ai"},{"title":"[제목]","content":"[content]","tag":"EV동향","accuracy_level":"MEDIUM","source_type":"market"}],"products_affected":["StrongLite (GMT)","SuperLite (LWRT)","BuffLite (EPP)","SMC"],"product_impact":{"StrongLite (GMT)":"HIGH","SuperLite (LWRT)":"HIGH","BuffLite (EPP)":"MEDIUM","IntermLite (PMC)":"LOW","SMC":"HIGH","Encapsulant (EVA/POE)":"NONE"},"actions":{"sales":"[3-4 sentence concrete sales actions citing competitor weaknesses]","rd":"[3-4 sentence specific technology R&D priorities]","management":"[3-4 sentence strategic positioning decisions]"},"timeline":{"short":"[4-5 sentence 6-month material market outlook]","mid":"[4-5 sentence 2-year technology transition outlook]","long":"[4-5 sentence 5-year material paradigm outlook]"}}"""
+        "json_schema": """{"summary":"[5-6 sentence Korean summary with key material trends, competitor moves, and implications]","impact_score":"MEDIUM","analysis_period":"PERIOD","accuracy_summary":{"overall_score":86,"has_ai_inference":false,"note":"[실제 검색 출처 나열]"},"data_sources":[{"name":"[source]","type":"market"},{"name":"[source]","type":"market"},{"name":"[source]","type":"official"}],"sections":[{"title":"[제목]","content":"[3-5 sentence Korean content with specific technology facts]","tag":"소재기술","accuracy_level":"HIGH","source_type":"market"},{"title":"[제목]","content":"[content about specific competitor]","tag":"경쟁사","accuracy_level":"HIGH","source_type":"market"},{"title":"[제목]","content":"[content about another competitor]","tag":"경쟁사","accuracy_level":"HIGH","source_type":"market"},{"title":"[제목]","content":"[content]","tag":"소재기술","accuracy_level":"HIGH","source_type":"market"},{"title":"[제목]","content":"[content]","tag":"친환경","accuracy_level":"MEDIUM","source_type":"regulatory"},{"title":"[제목]","content":"[content]","tag":"수요예측","accuracy_level":"MEDIUM","source_type":"market"},{"title":"[제목]","content":"[content]","tag":"리스크","accuracy_level":"MEDIUM","source_type":"ai"},{"title":"[제목]","content":"[content]","tag":"EV동향","accuracy_level":"MEDIUM","source_type":"market"}],"products_affected":["StrongLite (GMT)","SuperLite (LWRT)","BuffLite (EPP)","SMC"],"product_impact":{"StrongLite (GMT)":"HIGH","SuperLite (LWRT)":"HIGH","BuffLite (EPP)":"MEDIUM","IntermLite (PMC)":"LOW","SMC":"HIGH","Encapsulant (EVA/POE)":"NONE"},"actions":{"sales":"[3-4 sentence concrete sales actions citing competitor weaknesses]","rd":"[3-4 sentence specific technology R&D priorities]","management":"[3-4 sentence strategic positioning decisions]"},"timeline":{"short":"[4-5 sentence 6-month material market outlook]","mid":"[4-5 sentence 2-year technology transition outlook]","long":"[4-5 sentence 5-year material paradigm outlook]"}}"""
     },
     "solar": {
         "label": "태양광 소재",
@@ -185,7 +186,7 @@ Search for these topics separately:
 7. Global solar installation forecast 2025 — key markets, growth rates
 
 Write a comprehensive analysis report as instructed.""",
-        "json_schema": """{"summary":"[3-4 sentence Korean summary with specific solar market facts/numbers]","impact_score":"HIGH","analysis_period":"PERIOD","accuracy_summary":{"overall_score":90,"has_ai_inference":false,"note":"[실제 검색 출처 나열]"},"data_sources":[{"name":"[source]","type":"market"},{"name":"[source]","type":"regulatory"},{"name":"[source]","type":"official"}],"sections":[{"title":"[제목]","content":"[3-5 sentence Korean content with specific solar market numbers]","tag":"태양광시장","accuracy_level":"HIGH","source_type":"market"},{"title":"[제목]","content":"[content]","tag":"정책변화","accuracy_level":"HIGH","source_type":"regulatory"},{"title":"[제목]","content":"[content about Hanwha Q CELLS or key customer]","tag":"OEM동향","accuracy_level":"HIGH","source_type":"official"},{"title":"[제목]","content":"[content]","tag":"경쟁사","accuracy_level":"HIGH","source_type":"market"},{"title":"[제목]","content":"[content]","tag":"태양광시장","accuracy_level":"MEDIUM","source_type":"market"},{"title":"[제목]","content":"[content]","tag":"소재기술","accuracy_level":"MEDIUM","source_type":"market"},{"title":"[제목]","content":"[content]","tag":"수요예측","accuracy_level":"MEDIUM","source_type":"ai"},{"title":"[제목]","content":"[content]","tag":"리스크","accuracy_level":"MEDIUM","source_type":"ai"}],"products_affected":["Encapsulant (EVA/POE)","Backsheet","태양광 소재 사업부"],"product_impact":{"StrongLite (GMT)":"NONE","SuperLite (LWRT)":"NONE","BuffLite (EPP)":"NONE","IntermLite (PMC)":"NONE","SMC":"LOW","Encapsulant (EVA/POE)":"HIGH"},"actions":{"sales":"[3-4 sentence concrete solar sales actions]","rd":"[3-4 sentence solar material R&D directions]","management":"[3-4 sentence strategic solar business decisions]"},"timeline":{"short":"[4-5 sentence 6-month solar market outlook]","mid":"[4-5 sentence 2-year solar growth outlook]","long":"[4-5 sentence 5-year solar material technology outlook]"}}"""
+        "json_schema": """{"summary":"[5-6 sentence Korean summary with key solar market facts, policy updates, and business impact]","impact_score":"HIGH","analysis_period":"PERIOD","accuracy_summary":{"overall_score":90,"has_ai_inference":false,"note":"[실제 검색 출처 나열]"},"data_sources":[{"name":"[source]","type":"market"},{"name":"[source]","type":"regulatory"},{"name":"[source]","type":"official"}],"sections":[{"title":"[제목]","content":"[3-5 sentence Korean content with specific solar market numbers]","tag":"태양광시장","accuracy_level":"HIGH","source_type":"market"},{"title":"[제목]","content":"[content]","tag":"정책변화","accuracy_level":"HIGH","source_type":"regulatory"},{"title":"[제목]","content":"[content about Hanwha Q CELLS or key customer]","tag":"OEM동향","accuracy_level":"HIGH","source_type":"official"},{"title":"[제목]","content":"[content]","tag":"경쟁사","accuracy_level":"HIGH","source_type":"market"},{"title":"[제목]","content":"[content]","tag":"태양광시장","accuracy_level":"MEDIUM","source_type":"market"},{"title":"[제목]","content":"[content]","tag":"소재기술","accuracy_level":"MEDIUM","source_type":"market"},{"title":"[제목]","content":"[content]","tag":"수요예측","accuracy_level":"MEDIUM","source_type":"ai"},{"title":"[제목]","content":"[content]","tag":"리스크","accuracy_level":"MEDIUM","source_type":"ai"}],"products_affected":["Encapsulant (EVA/POE)","Backsheet","태양광 소재 사업부"],"product_impact":{"StrongLite (GMT)":"NONE","SuperLite (LWRT)":"NONE","BuffLite (EPP)":"NONE","IntermLite (PMC)":"NONE","SMC":"LOW","Encapsulant (EVA/POE)":"HIGH"},"actions":{"sales":"[3-4 sentence concrete solar sales actions]","rd":"[3-4 sentence solar material R&D directions]","management":"[3-4 sentence strategic solar business decisions]"},"timeline":{"short":"[4-5 sentence 6-month solar market outlook]","mid":"[4-5 sentence 2-year solar growth outlook]","long":"[4-5 sentence 5-year solar material technology outlook]"}}"""
     }
 }
 
@@ -194,7 +195,7 @@ Write a comprehensive analysis report as instructed.""",
 # 공통 유틸
 # ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 def api_request(payload, max_retries=4):
-    """429 Too Many Requests 시 지수 백오프로 재시도"""
+    """API 호출 — 429 시 지수 백오프 재시도, 400 시 본문 출력"""
     data = json.dumps(payload).encode("utf-8")
     for attempt in range(max_retries):
         req = urllib.request.Request(
@@ -210,23 +211,36 @@ def api_request(payload, max_retries=4):
             with urllib.request.urlopen(req, timeout=240) as resp:
                 return json.loads(resp.read().decode("utf-8"))
         except urllib.error.HTTPError as e:
+            # 에러 본문 읽기 (원인 파악용)
+            try:
+                err_body = e.read().decode("utf-8")
+                err_json = json.loads(err_body)
+                err_msg = err_json.get("error", {}).get("message", err_body[:300])
+            except Exception:
+                err_msg = str(e)
+
             if e.code == 429:
-                # 지수 백오프: 60s → 120s → 180s → 240s
                 wait = 60 * (attempt + 1)
                 print(f"  ⚠ 429 Rate limit (시도 {attempt+1}/{max_retries}) — {wait}초 대기...")
                 time.sleep(wait)
                 if attempt == max_retries - 1:
-                    raise
+                    raise urllib.error.HTTPError(
+                        e.url, e.code, f"429: {err_msg}", e.headers, None)
+            elif e.code == 400:
+                # 400은 재시도 없이 즉시 상세 오류 출력
+                raise urllib.error.HTTPError(
+                    e.url, e.code, f"400 Bad Request: {err_msg}", e.headers, None)
             else:
-                raise
+                raise urllib.error.HTTPError(
+                    e.url, e.code, f"HTTP {e.code}: {err_msg}", e.headers, None)
 
 
 def run_tool_loop(system, messages, tools=None, max_tokens=4000, max_loops=12):
-    """tool_use 루프 실행 → 최종 text 반환"""
+    """tool_use / server_tool_use 루프 실행 → 최종 text 반환"""
     search_count = 0
     for loop in range(max_loops):
         payload = {
-            "model": "claude-sonnet-4-5",
+            "model": "claude-sonnet-4-6",   # 최신 모델
             "max_tokens": max_tokens,
             "system": system,
             "messages": messages
@@ -234,29 +248,37 @@ def run_tool_loop(system, messages, tools=None, max_tokens=4000, max_loops=12):
         if tools:
             payload["tools"] = tools
 
-        body    = api_request(payload)
-        stop    = body.get("stop_reason", "")
-        blocks  = body.get("content", [])
+        body   = api_request(payload)
+        stop   = body.get("stop_reason", "")
+        blocks = body.get("content", [])
 
+        # 검색 쿼리 로깅 (tool_use + server_tool_use 둘 다 처리)
         for b in blocks:
-            if b.get("type") == "tool_use" and b.get("name") == "web_search":
+            btype = b.get("type", "")
+            bname = b.get("name", "")
+            if btype in ("tool_use", "server_tool_use") and bname == "web_search":
                 search_count += 1
-                print(f"    🔍 검색 {search_count}: {b.get('input',{}).get('query','')}")
+                query = b.get("input", {}).get("query", "")
+                print(f"    🔍 검색 {search_count}: {query}")
 
         if stop == "end_turn":
-            text = "".join(b.get("text","") for b in blocks if b.get("type")=="text")
+            text = "".join(b.get("text", "") for b in blocks if b.get("type") == "text")
             return text, search_count
 
         elif stop == "tool_use":
             messages.append({"role": "assistant", "content": blocks})
+            # server_tool_use는 tool_result 불필요 (서버사이드 자동 처리)
+            # tool_use(일반)만 tool_result 전달
             tool_results = [
                 {"type": "tool_result", "tool_use_id": b["id"], "content": ""}
                 for b in blocks if b.get("type") == "tool_use"
             ]
-            messages.append({"role": "user", "content": tool_results})
+            if tool_results:
+                messages.append({"role": "user", "content": tool_results})
+            # server_tool_use만 있는 경우 — 다음 루프에서 자동 계속
 
         elif stop == "max_tokens":
-            text = "".join(b.get("text","") for b in blocks if b.get("type")=="text")
+            text = "".join(b.get("text", "") for b in blocks if b.get("type") == "text")
             return text, search_count
 
         else:
@@ -428,7 +450,7 @@ JSON 스키마:
     return result
 
 
-# ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━ 
+# ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 # 실행
 # ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 os.makedirs("data", exist_ok=True)
