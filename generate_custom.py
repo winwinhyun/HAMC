@@ -31,19 +31,31 @@ JSON만 출력(마크다운 없이):
 
 WEB_SEARCH_TOOL = {"type": "web_search_20250305", "name": "web_search", "max_uses": 5}
 
-def api_request(payload):
+def api_request(payload, max_retries=4):
+    import urllib.error
     data = json.dumps(payload).encode("utf-8")
-    req  = urllib.request.Request(
-        "https://api.anthropic.com/v1/messages",
-        data=data,
-        headers={
-            "x-api-key": API_KEY,
-            "anthropic-version": "2023-06-01",
-            "content-type": "application/json"
-        }
-    )
-    with urllib.request.urlopen(req, timeout=180) as r:
-        return json.loads(r.read().decode("utf-8"))
+    for attempt in range(max_retries):
+        req  = urllib.request.Request(
+            "https://api.anthropic.com/v1/messages",
+            data=data,
+            headers={
+                "x-api-key": API_KEY,
+                "anthropic-version": "2023-06-01",
+                "content-type": "application/json"
+            }
+        )
+        try:
+            with urllib.request.urlopen(req, timeout=180) as r:
+                return json.loads(r.read().decode("utf-8"))
+        except urllib.error.HTTPError as e:
+            if e.code == 429:
+                wait = 60 * (attempt + 1)
+                print(f"  ⚠ 429 Rate limit — {wait}초 대기...")
+                import time; time.sleep(wait)
+                if attempt == max_retries - 1:
+                    raise
+            else:
+                raise
 
 def fix_and_parse(text):
     text = re.sub(r'```json\s*', '', text)
