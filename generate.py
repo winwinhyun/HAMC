@@ -19,7 +19,8 @@ Product context (do not quote directly):
 - BuffLite(EPP): bumper energy absorbers, sound insulation, EMI shielding
 - IntermLite(PMC): automotive interior skin materials, instrument panels
 - SMC: exterior panels, battery pack cases, pickup truck beds
-Competitors: Toray, Hexcel, SGL Carbon
+- Solar Materials: Encapsulant (EVA/POE sheets for PV modules), Backsheet (fluoride/transparent/high-reflection types), production capacity 9GW/year
+Competitors: Toray, Hexcel, SGL Carbon, Hangzhou First Applied Material, Cybrid Technologies
 
 STRICT OUTPUT RULES:
 - Output ONLY valid JSON
@@ -57,23 +58,28 @@ Return this exact JSON (all string values single-line, no newlines in strings):
 
 Return this exact JSON (all string values single-line, no newlines in strings):
 {"summary":"[2-3 sentence summary in Korean]","impact_score":"MEDIUM","analysis_period":"[period in Korean]","accuracy_summary":{"overall_score":77,"has_ai_inference":true,"note":"[note in Korean]"},"data_sources":[{"name":"소재 기술 업계 보도","type":"market"},{"name":"경쟁사 동향 분석","type":"market"},{"name":"AI 기술 트렌드 추론","type":"ai"}],"sections":[{"title":"[title]","content":"[2-3 sentence content in Korean, no newlines]","tag":"소재기술","accuracy_level":"HIGH","source_type":"market"},{"title":"[title]","content":"[content]","tag":"경쟁사","accuracy_level":"HIGH","source_type":"market"},{"title":"[title]","content":"[content]","tag":"소재기술","accuracy_level":"MEDIUM","source_type":"market"},{"title":"[title]","content":"[content]","tag":"친환경","accuracy_level":"MEDIUM","source_type":"market"},{"title":"[title]","content":"[content]","tag":"수요예측","accuracy_level":"MEDIUM","source_type":"ai"},{"title":"[title]","content":"[content]","tag":"리스크","accuracy_level":"LOW","source_type":"ai"}],"products_affected":["StrongLite (GMT)","SuperLite (LWRT)","BuffLite (EPP)","SMC"],"actions":{"sales":"[action in Korean, single line]","rd":"[action in Korean, single line]","management":"[action in Korean, single line]"},"timeline":{"short":"[6month outlook in Korean, single line]","mid":"[2year outlook in Korean, single line]","long":"[5year outlook in Korean, single line]"}}"""
+    },
+    "solar": {
+        "label": "태양광 소재",
+        "prompt": """Analyze global solar PV materials market trends relevant to Hanwha Advanced Materials' Solar Materials Business Division.
+Focus on: encapsulant (EVA/POE) market dynamics, backsheet demand trends, global PV installation forecasts, key customers (Hanwha Q CELLS and other module makers), competitors (Hangzhou First Applied Material, Cybrid Technologies, etc.), US IRA solar manufacturing incentives, China PV supply chain changes, floating solar growth.
+
+Return this exact JSON (all string values single-line, no newlines in strings):
+{"summary":"[2-3 sentence summary in Korean]","impact_score":"HIGH","analysis_period":"[period in Korean]","accuracy_summary":{"overall_score":78,"has_ai_inference":true,"note":"[note in Korean]"},"data_sources":[{"name":"글로벌 태양광 시장 리포트","type":"market"},{"name":"PV 정책·보조금 동향","type":"regulatory"},{"name":"모듈 업체 공식 발표","type":"official"},{"name":"AI 시장 추론","type":"ai"}],"sections":[{"title":"[title]","content":"[2-3 sentence content in Korean, no newlines]","tag":"태양광시장","accuracy_level":"HIGH","source_type":"market"},{"title":"[title]","content":"[content]","tag":"정책변화","accuracy_level":"HIGH","source_type":"regulatory"},{"title":"[title]","content":"[content]","tag":"경쟁사","accuracy_level":"MEDIUM","source_type":"market"},{"title":"[title]","content":"[content]","tag":"소재기술","accuracy_level":"MEDIUM","source_type":"market"},{"title":"[title]","content":"[content]","tag":"수요예측","accuracy_level":"MEDIUM","source_type":"ai"},{"title":"[title]","content":"[content]","tag":"리스크","accuracy_level":"LOW","source_type":"ai"}],"products_affected":["Encapsulant (EVA/POE)","Backsheet","태양광 소재 사업부"],"actions":{"sales":"[action in Korean, single line]","rd":"[action in Korean, single line]","management":"[action in Korean, single line]"},"timeline":{"short":"[6month outlook in Korean, single line]","mid":"[2year outlook in Korean, single line]","long":"[5year outlook in Korean, single line]"}}"""
     }
 }
 
 def fix_and_parse(text):
-    # 코드블록 제거
     text = re.sub(r'```json\s*', '', text)
     text = re.sub(r'```\s*', '', text)
     text = text.strip()
 
-    # { ~ } 추출
     start = text.find('{')
     end = text.rfind('}')
     if start == -1 or end == -1:
         return None
     text = text[start:end+1]
 
-    # 문자열 안의 줄바꿈 제거 (문자 단위 처리)
     result = []
     in_string = False
     escape_next = False
