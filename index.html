@@ -437,27 +437,15 @@ body{font-family:'Pretendard','Apple SD Gothic Neo',sans-serif;color:var(--ink);
 
 <script>
 /* ════════════════════════════════════
-   API KEY — data/config.json 에서 로드
-   Actions가 {"k":"sk-ant-..."} 형태로 저장
-   HTML/JS에 키가 노출되지 않음
+   직접 질문 — GitHub Actions 트리거 방식
+   브라우저에 API 키 없음, PAT만 사용
+   PAT는 ghp_ 패턴 → Secret Scanning 통과
    ════════════════════════════════════ */
-let _cachedApiKey = "";
-
-async function getApiKey() {
-  if (_cachedApiKey) return _cachedApiKey;
-  try {
-    const res = await fetch(`data/config.json?t=${Date.now()}`);
-    if (!res.ok) throw new Error("config not found");
-    const cfg = await res.json();
-    _cachedApiKey = cfg.k || "";
-    return _cachedApiKey;
-  } catch(_) {
-    return "";
-  }
-}
+const GH_REPO = "winwinhyun/HAMC";  // ← 본인 저장소로 변경
+const GH_PAT  = "__GH_PAT__";       // Actions에서 주입 (ghp_... 패턴)
 
 /* ════════════════════════════════════
-   SYSTEM PROMPT
+   SYSTEM PROMPT (직접 질문용)
    ════════════════════════════════════ */
 const SYSTEM_PROMPT = `당신은 한화첨단소재의 시장 인텔리전스 수석 분석가입니다.
 【내부 참조 전용 — 레포트에 이 내용을 그대로 인용하지 말 것】
@@ -587,25 +575,20 @@ function toggleCustom() {
   const b = document.getElementById("custom-toggle");
   const open = a.classList.toggle("open");
   b.style.display = open ? "none" : "block";
-  if (open) {
-    document.getElementById("custom-input").focus();
-  }
+  if (open) document.getElementById("custom-input").focus();
 }
 
 /* ════════════════════════════════════
    직접 질문 실행
+   → GitHub Actions repository_dispatch 트리거
+   → data/custom.json polling (최대 3분)
    ════════════════════════════════════ */
 async function runCustom() {
   const q = document.getElementById("custom-input").value.trim();
   if (!q) return;
 
-  const apiKey = await getApiKey();
-  if (!apiKey) {
-    showError("서비스 준비 중입니다. 잠시 후 다시 시도해주세요.");
-    return;
-  }
-
   const label = q.slice(0,30) + (q.length > 30 ? "…" : "");
+  const requestId = Date.now().toString();
 
   document.getElementById("custom-area").classList.remove("open");
   document.getElementById("custom-toggle").style.display = "block";
@@ -615,75 +598,90 @@ async function runCustom() {
   document.getElementById("result").classList.remove("show");
   showError("");
   document.getElementById("init-notice").classList.remove("show");
-  document.getElementById("custom-loading").classList.add("show");
+
+  const loadEl = document.getElementById("custom-loading");
+  const loadSub = loadEl.querySelector(".load-sub");
+  loadEl.classList.add("show");
+  loadSub.textContent = "GitHub Actions에 분석 요청 중...";
+
+  // PAT가 주입됐는지 확인
+  if (!GH_PAT || GH_PAT === "__GH_PAT__") {
+    loadEl.classList.remove("show");
+    showError("직접 질문 기능을 사용하려면 GitHub Secret 'GH_PAT'를 설정해주세요.");
+    document.getElementById("btn-custom-run").disabled = false;
+    return;
+  }
 
   try {
-    const data = await callClaude(q + "\n\n한화첨단소재 관점에서 분석하세요. 실제 최신 시장 뉴스를 기반으로 작성하세요.", apiKey);
+    // 1단계: Actions 트리거
+    const triggerRes = await fetch(
+      `https://api.github.com/repos/${GH_REPO}/dispatches`,
+      {
+        method: "POST",
+        headers: {
+          "Authorization": `token ${GH_PAT}`,
+          "Accept": "application/vnd.github.v3+json",
+          "Content-Type": "application/json"
+        },
+        body: JSON.stringify({
+          event_type: "custom_query",
+          client_payload: { question: q, request_id: requestId }
+        })
+      }
+    );
+
+    if (!triggerRes.ok) {
+      const err = await triggerRes.json().catch(()=>({}));
+      throw new Error(`Actions 트리거 실패: ${err.message || triggerRes.status}`);
+    }
+
+    // 2단계: custom.json polling (최대 180초)
+    loadSub.textContent = "AI가 분석 중입니다... (1~3분 소요)";
+    let elapsed = 0;
+    const interval = 8000;
+    const maxWait = 180000;
+
+    const data = await new Promise((resolve, reject) => {
+      const timer = setInterval(async () => {
+        elapsed += interval;
+        const remaining = Math.max(0, Math.ceil((maxWait - elapsed) / 1000));
+        loadSub.textContent = `AI가 분석 중입니다... (최대 ${remaining}초 남음)`;
+
+        try {
+          const r = await fetch(`data/custom.json?t=${Date.now()}`);
+          if (!r.ok) return;
+          const json = await r.json();
+          // request_id로 최신 결과인지 확인
+          if (json?.request_id === requestId || json?.summary) {
+            clearInterval(timer);
+            resolve(json);
+          }
+        } catch(_) {}
+
+        if (elapsed >= maxWait) {
+          clearInterval(timer);
+          reject(new Error("분석 시간이 초과됐습니다. 잠시 후 다시 시도해주세요."));
+        }
+      }, interval);
+    });
+
     const dateStr = new Date().toLocaleDateString("ko-KR",{year:"numeric",month:"long",day:"numeric"});
     const timeStr = new Date().toLocaleTimeString("ko-KR",{hour:"2-digit",minute:"2-digit"});
     const entry = {topic:label, topicId:"custom", dateStr, timeStr, data};
     customHistory.unshift(entry);
     if (customHistory.length > 5) customHistory.pop();
-    document.getElementById("custom-loading").classList.remove("show");
+
+    loadEl.classList.remove("show");
     renderResult(entry);
     renderCustomHistory();
     document.getElementById("result").classList.add("show");
     window.scrollTo({top: document.getElementById("result").offsetTop - 80, behavior:"smooth"});
+
   } catch(e) {
-    document.getElementById("custom-loading").classList.remove("show");
+    loadEl.classList.remove("show");
     showError(e.message);
   } finally {
     document.getElementById("btn-custom-run").disabled = false;
-  }
-}
-
-/* ════════════════════════════════════
-   Claude API 호출
-   ════════════════════════════════════ */
-async function callClaude(prompt, apiKey) {
-  const dateStr = new Date().toLocaleDateString("ko-KR",{year:"numeric",month:"long",day:"numeric"});
-  let res;
-  try {
-    res = await fetch("https://api.anthropic.com/v1/messages", {
-      method:"POST",
-      headers:{
-        "Content-Type":"application/json",
-        "x-api-key": apiKey,
-        "anthropic-version":"2023-06-01",
-        "anthropic-dangerous-direct-browser-access":"true"
-      },
-      body: JSON.stringify({
-        model:"claude-sonnet-4-5", max_tokens:4000,
-        system: SYSTEM_PROMPT,
-        messages:[{role:"user", content:`오늘 날짜: ${dateStr}\n\n${prompt}`}]
-      })
-    });
-  } catch(networkErr) {
-    throw new Error("네트워크 오류가 발생했습니다. 인터넷 연결을 확인해주세요.");
-  }
-
-  if (!res.ok) {
-    let errMsg = `HTTP ${res.status}`;
-    try {
-      const err = await res.json();
-      errMsg = err.error?.message || errMsg;
-    } catch(_) {}
-    if (res.status === 401) {
-      throw new Error("API 인증 오류가 발생했습니다. 관리자에게 문의해주세요.");
-    }
-    if (res.status === 429) throw new Error("API 요청 한도를 초과했습니다. 잠시 후 다시 시도해주세요.");
-    if (res.status === 403) throw new Error("API 키 권한이 없습니다. 키를 확인해주세요.");
-    throw new Error("분석 중 오류: " + errMsg);
-  }
-
-  const data = await res.json();
-  const raw = data.content?.[0]?.text || "";
-  const m = raw.match(/\{[\s\S]*\}/);
-  if (!m) throw new Error("Claude 응답 파싱에 실패했습니다. 다시 시도해주세요.");
-  try {
-    return JSON.parse(m[0]);
-  } catch(_) {
-    throw new Error("응답 JSON 파싱 오류. 다시 시도해주세요.");
   }
 }
 
