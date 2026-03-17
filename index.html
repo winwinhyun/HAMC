@@ -80,7 +80,16 @@ body{font-family:'Pretendard','Apple SD Gothic Neo',sans-serif;color:var(--ink);
 .topic-btn .t-icon{font-size:22px;margin-bottom:8px;display:block}
 .topic-btn .t-name{font-size:13px;font-weight:600;color:var(--ink2);position:relative;z-index:1}
 .topic-btn .t-desc{font-size:11px;color:var(--ink4);margin-top:3px;position:relative;z-index:1}
-.topic-btn:hover .t-name,.topic-btn.active .t-name{color:var(--orange)}
+.topic-btn .t-period{
+  font-size:9.5px;font-weight:600;letter-spacing:.08em;text-transform:uppercase;
+  margin-top:6px;display:inline-block;
+  background:var(--stone2);color:var(--ink4);
+  padding:2px 7px;border-radius:20px;
+  transition:.22s;position:relative;z-index:1;
+}
+.topic-btn:hover .t-period,.topic-btn.active .t-period{
+  background:var(--orange-bg);color:var(--orange);border:1px solid #fed7aa;
+}
 
 /* CUSTOM */
 #custom-toggle{width:100%;background:transparent;border:1.5px dashed var(--stone2);border-radius:12px;padding:11px;color:var(--ink4);font-size:12.5px;font-family:'Pretendard',sans-serif;cursor:pointer;margin-bottom:28px;transition:all .2s}
@@ -285,19 +294,34 @@ body{font-family:'Pretendard','Apple SD Gothic Neo',sans-serif;color:var(--ink);
   <div class="sec-label">분석 모듈</div>
   <div id="modules">
     <button class="topic-btn active" id="btn-weekly" onclick="showTopic('weekly')">
-      <span class="t-icon">📊</span><div class="t-name">주간 종합</div><div class="t-desc">전체 시장 동향</div>
+      <span class="t-icon">📊</span>
+      <div class="t-name">주간 종합</div>
+      <div class="t-desc">전체 시장 동향</div>
+      <div class="t-period">최근 7일</div>
     </button>
     <button class="topic-btn" id="btn-ev" onclick="showTopic('ev')">
-      <span class="t-icon">⚡</span><div class="t-name">EV / 정책</div><div class="t-desc">전기차·규제 변화</div>
+      <span class="t-icon">⚡</span>
+      <div class="t-name">EV / 정책</div>
+      <div class="t-desc">전기차·규제 변화</div>
+      <div class="t-period">최근 30일</div>
     </button>
     <button class="topic-btn" id="btn-oem" onclick="showTopic('oem')">
-      <span class="t-icon">🚗</span><div class="t-name">OEM 동향</div><div class="t-desc">완성차 업체 동향</div>
+      <span class="t-icon">🚗</span>
+      <div class="t-name">OEM 동향</div>
+      <div class="t-desc">완성차 업체 동향</div>
+      <div class="t-period">최근 30일</div>
     </button>
     <button class="topic-btn" id="btn-materials" onclick="showTopic('materials')">
-      <span class="t-icon">🔬</span><div class="t-name">소재 기술</div><div class="t-desc">CFRP·복합소재</div>
+      <span class="t-icon">🔬</span>
+      <div class="t-name">소재 기술</div>
+      <div class="t-desc">CFRP·복합소재</div>
+      <div class="t-period">최근 60일</div>
     </button>
     <button class="topic-btn" id="btn-solar" onclick="showTopic('solar')">
-      <span class="t-icon">☀️</span><div class="t-name">태양광 소재</div><div class="t-desc">PV 소재·정책</div>
+      <span class="t-icon">☀️</span>
+      <div class="t-name">태양광 소재</div>
+      <div class="t-desc">PV 소재·정책</div>
+      <div class="t-period">최근 30일</div>
     </button>
   </div>
 
@@ -335,7 +359,11 @@ body{font-family:'Pretendard','Apple SD Gothic Neo',sans-serif;color:var(--ink);
         </div>
       </div>
       <div class="meta-bar">
-        <div class="meta-item"><span>📅</span><span id="mc-period" class="mi-val">—</span></div>
+        <div class="meta-item" id="mc-period-item">
+          <span>📅</span>
+          <span style="font-size:11px;color:var(--ink3)">집계 기간</span>
+          <span id="mc-period" class="mi-val" style="color:var(--orange);font-family:'JetBrains Mono',monospace;font-size:11px">—</span>
+        </div>
         <div class="meta-item">
           <span>🎯</span><span style="font-size:11px;color:var(--ink3)">종합 정확도</span>
           <div class="acc-wrap"><div class="acc-bar"><div class="acc-fill" id="acc-fill"></div></div><span class="acc-pct" id="acc-pct">—</span></div>
